@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { 
-  PublishedComponent, // <--- This is the magic tool
+  PublishedComponent,
   historyPush, 
   withModulesManager, 
   withHistory 
@@ -14,8 +14,6 @@ const styles = (theme) => ({
 });
 
 class CheckInPage extends Component {
-  
-  // Navigate to your Check-In Detail page on double click
   onDoubleClick = (insuree) => {
     historyPush(
         this.props.modulesManager, 
