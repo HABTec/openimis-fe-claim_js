@@ -723,7 +723,6 @@ export function generate(uuid) {
 }
 
 export function checkInInsuree(mm, insureeUuid, clientMutationLabel = "insureeCheckIn") {
-  
   const mutation = formatMutation(
     "insureeCheckIn",
     `uuid: "${insureeUuid}"`,
