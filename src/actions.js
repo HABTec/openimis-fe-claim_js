@@ -726,7 +726,7 @@ export function checkInInsuree(mm, insureeUuid, clientMutationLabel = "insureeCh
   const mutation = formatMutation(
     "insureeCheckIn",
     `uuid: "${insureeUuid}"`,
-    clientMutationLabel 
+    clientMutationLabel
   );
 
   var requestedDateTime = new Date();
