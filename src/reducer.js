@@ -58,7 +58,6 @@ function reducer(
   },
   action,
 ) {
-  // console.lo
   switch (action.type) {
     case "CLAIM_CLAIM_ATTACHMENTS_REQ":
       return {
