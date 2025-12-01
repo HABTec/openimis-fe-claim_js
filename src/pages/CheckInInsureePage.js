@@ -119,7 +119,6 @@ class CheckInInsureePage extends Component {
                 color= {"primary"}
                 size="large"
                 startIcon={isLoading ? loadingIcon : actionIcon} 
-                
                 onClick={this.handleToggleCheckIn}
                 disabled={isLoading}
             >
