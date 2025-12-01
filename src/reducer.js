@@ -358,7 +358,7 @@ function reducer(
         ...state,
         checkingIn: false,
         checkedIn: true,
-        persistedCheckInStatus: true, 
+        persistedCheckInStatus: true,
         submittingMutation: false,
         alert: {
           type: "info",
