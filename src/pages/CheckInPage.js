@@ -3,7 +3,6 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { 
   PublishedComponent,
-  PublishedComponent,
   historyPush, 
   withModulesManager, 
   withHistory 
