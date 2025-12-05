@@ -721,3 +721,57 @@ export function generate(uuid) {
       .then((e) => dispatch({ type: "CLAIM_PRINT_DONE" }));
   };
 }
+
+export function checkInInsuree(mm, insureeUuid, clientMutationLabel = "insureeCheckIn") {
+  const mutation = formatMutation(
+    "insureeCheckIn",
+    `uuid: "${insureeUuid}"`,
+    clientMutationLabel
+  );
+
+  var requestedDateTime = new Date();
+
+  return graphql(
+    mutation.payload,
+    ["CLAIM_MUTATION_REQ", "CLAIM_CHECKIN_RESP", "CLAIM_MUTATION_ERR"],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel, 
+      requestedDateTime,
+    }
+  );
+}
+
+export function removeCheckInInsuree(mm, insureeUuid, clientMutationLabel = "removeCheckIn") {
+  let mutation = formatMutation(
+    "deleteInsureeCheckin",
+    `insureeUuid: "${insureeUuid}"`,
+    clientMutationLabel
+  )
+  var requestedDateTime = new Date();
+  return graphql(
+    mutation.payload,
+    ["CLAIM_MUTATION_REQ", "CLAIM_REMOVE_CHECKIN_RESP", "CLAIM_MUTATION_ERR"],
+    {
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      requestedDateTime,
+    }
+  )
+}
+
+
+export function fetchInsureeCheckInStatus(mm, insureeUuid) {
+  const payload = formatPageQuery(
+    "insurees",
+    [`uuid: "${insureeUuid}" , isCheckedIn: true`],
+   ["id", "uuid"]
+  );
+  return graphql(payload, "CLAIM_INSUREE_CHECKIN_STATUS");
+}
+
+export function clearAlert() {
+  return (dispatch) => {
+    dispatch({ type: "CORE_ALERT_CLEAR" });
+  };
+}

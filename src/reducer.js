@@ -37,6 +37,9 @@ function reducer(
     fetchedClaimCodeCount: false,
     claimCodeCount: null,
     errorClaimCodeCount: null,
+    checkingIn: false,
+    checkedIn: false,
+    persistedCheckInStatus: null,
     healthFacilities: {
       availableHealthFacilities: [],
       isFetching: false,
@@ -343,9 +346,62 @@ function reducer(
         },
       };
     case "CLAIM_MUTATION_REQ":
+      if (action.clientMutationLabel === "insureeCheckIn") {
+        return {
+          ...dispatchMutationReq(state, action),
+          checkingIn: true,
+        };
+      }
       return dispatchMutationReq(state, action);
+    case "CLAIM_CHECKIN_RESP":
+      return {
+        ...state,
+        checkingIn: false,
+        checkedIn: true,
+        persistedCheckInStatus: true,
+        submittingMutation: false,
+        alert: {
+          type: "info",
+          message: "Insuree checked in successfully"
+        }
+      };
     case "CLAIM_MUTATION_ERR":
+      if (action.clientMutationLabel === "insureeCheckIn") {
+        return {
+          ...dispatchMutationErr(state, action),
+          checkingIn: false,
+          checkedIn: false,
+        };
+      }
       return dispatchMutationErr(state, action);
+
+    case "CLAIM_INSUREE_CHECKIN_STATUS_REQ":
+      return {
+        ...state,
+        persistedCheckInStatus: null, 
+      };
+
+    case "CLAIM_INSUREE_CHECKIN_STATUS_RESP":
+      const insureeEdges = action.payload.data.insurees.edges;
+      let isCheckedIn = false;
+      insureeEdges.length > 0 && (isCheckedIn = true);
+
+      return {
+        ...state,
+        persistedCheckInStatus: isCheckedIn,
+      };
+    case "CLAIM_REMOVE_CHECKIN_RESP":
+      return {
+        ...state,
+        checkingIn: false,
+        checkedIn: false,
+        persistedCheckInStatus: false, 
+        submittingMutation: false,
+        alert: {
+          type: "info",
+          message: "Check-in removed successfully"
+        }
+      };
     case "CLAIM_CREATE_CLAIM_RESP":
       return dispatchMutationResp(state, "createClaim", action);
     case "CLAIM_UPDATE_CLAIM_RESP":

@@ -140,6 +140,7 @@ class ClaimMasterPanel extends FormPanel {
       restore,
       isRestored,
       isDuplicate,
+      insureeFixed,
     } = this.props;
     if (!edited) return null;
     let totalClaimed = 0;
@@ -183,7 +184,7 @@ class ClaimMasterPanel extends FormPanel {
                 value={edited.insuree}
                 reset={reset || isDuplicate}
                 onChange={(v, s) => this.updateAttribute("insuree", v)}
-                readOnly={ro}
+                readOnly={ro || insureeFixed}
                 required={true}
               />
             </Grid>

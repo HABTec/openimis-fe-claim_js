@@ -36,12 +36,16 @@ import ClaimInsureeSummary from "./components/ClaimInsureeSummary";
 import YesNoPicker from "./pickers/YesNoPicker";
 import PatientConditionPicker from "./pickers/PatientConditionPicker";
 import { RIGHT_ADD, RIGHT_SUBMIT, RIGHT_CLAIMREVIEW, RIGHT_PROCESS } from "./constants";
+import CheckInPage from './pages/CheckInPage';
+import CheckInInsureePage from './pages/CheckInInsureePage';
 
 const ROUTE_HEALTH_FACILITIES = "claim/healthFacilities";
 const ROUTE_CLAIM_EDIT = "claim/healthFacilities/claim";
 const ROUTE_REVIEWS = "claim/reviews";
 const ROUTE_CLAIM_REVIEW = "claim/reviews/review";
 const ROUTE_CLAIM_FEEDBACK = "claim/feedback";
+const ROUTE_CLAIM_CHECKIN = "claim/checkIn";
+const ROUTE_CLAIM_CHECKIN_INSUREE = "claim/checkIn/insuree";
 
 const DEFAULT_CONFIG = {
   "translations": [{ key: "en", messages: messages_en } , { key: "am", messages: messages_am} , { key: "om", messages: messages_om }],
@@ -148,6 +152,8 @@ const DEFAULT_CONFIG = {
     { key: "claim.route.reviews", ref: ROUTE_REVIEWS },
     { key: "claim.route.feedback", ref: ROUTE_CLAIM_FEEDBACK },
     { key: "claim.route.review", ref: ROUTE_CLAIM_REVIEW },
+    { key: "claim.route.checkIn", ref: ROUTE_CLAIM_CHECKIN },
+    { key: "claim.route.checkInInsuree", ref: ROUTE_CLAIM_CHECKIN_INSUREE },
     { key: "claim.ClaimAdminPicker", ref: ClaimAdminPicker },
     {
       key: "claim.ClaimAdminPicker.projection",
@@ -190,6 +196,8 @@ const DEFAULT_CONFIG = {
     { path: ROUTE_CLAIM_EDIT + "/:claim_uuid?", component: EditPage }, // ? = optional (needed to route new claims)
     { path: ROUTE_REVIEWS, component: ReviewsPage },
     { path: ROUTE_CLAIM_REVIEW + "/:claim_uuid/:customBackUri?/:customBackUuid?", component: ReviewPage },
+    { path: ROUTE_CLAIM_CHECKIN, component: CheckInPage },
+    { path: ROUTE_CLAIM_CHECKIN_INSUREE + "/:insuree_uuid", component: CheckInInsureePage },
     { path: ROUTE_CLAIM_FEEDBACK + "/:claim_uuid", component: FeedbackPage },
   ],
   "core.MainMenu": [{ name: 'ClaimMainMenu', component: ClaimMainMenu }],
@@ -210,6 +218,13 @@ const DEFAULT_CONFIG = {
       id: "claim.reviews",
       filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
     },
+    {
+      text: <FormattedMessage module="claim" id="menu.checkIn" />,
+      icon: <ScreenShare />,
+      route: "/claim/checkIn",
+      id: "claim.checkIn",
+      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+    }
 ],
 };
 

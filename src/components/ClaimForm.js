@@ -143,6 +143,11 @@ class ClaimForm extends Component {
     claim.code = "";
     claim.preAuthorization = false;
     claim.jsonExt = {};
+
+    if (this.props.preSelectedInsuree) {
+      claim.insuree = this.props.preSelectedInsuree;
+    }
+
     return claim;
   }
 
@@ -576,6 +581,7 @@ class ClaimForm extends Component {
       forReview: forReview,
       forFeedback: forFeedback,
       onEditedChanged: this.onEditedChanged,
+      insureeFixed: !!this.props.preSelectedInsuree,
     };
     return (
       <div className={readOnly ? classes.lockedPage : null}>
