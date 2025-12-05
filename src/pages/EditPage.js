@@ -57,6 +57,7 @@ class EditPage extends Component {
         <ClaimForm
           claim_uuid={claim_uuid}
           back={(e) => historyPush(modulesManager, history, "claim.route.healthFacilities")}
+          preSelectedInsuree={this.props.insuree}
           add={rights.includes(RIGHT_ADD) ? this.add : null}
           save={rights.includes(RIGHT_LOAD) ? this.save : null}
           isHealthFacilityPage={isHealthFacilityPage()}
@@ -70,6 +71,7 @@ const mapStateToProps = (state, props) => ({
   rights: !!state.core && !!state.core.user && !!state.core.user.i_user ? state.core.user.i_user.rights : [],
   claim_uuid: props.match.params.claim_uuid,
   path: props.match.path,
+  insuree: props.location && props.location.state ? props.location.state.preSelectedInsuree : null,
 });
 
 const mapDispatchToProps = (dispatch) => {

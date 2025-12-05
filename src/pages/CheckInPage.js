@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { 
   PublishedComponent,
+  PublishedComponent,
   historyPush, 
   withModulesManager, 
   withHistory 
@@ -14,6 +15,7 @@ const styles = (theme) => ({
 });
 
 class CheckInPage extends Component {
+  
   onDoubleClick = (insuree) => {
     historyPush(
         this.props.modulesManager, 
