@@ -50,8 +50,8 @@ class HealthFacilitiesPage extends Component {
     this.tabDefinitions = [
       {
         id: 0,
-        label: "claimSummaries.tabs.entered", 
-        defaultLabel: "Entered",
+        label: "claimSummaries.tabs.checkedIn", 
+        defaultLabel: "Checked-In",
         type: "insuree", 
         filter: { 
           "isCheckedIn": { "value": true, "filter": "isCheckedIn: true" } 
@@ -59,31 +59,46 @@ class HealthFacilitiesPage extends Component {
       },
       {
         id: 1,
-        label: "claimSummaries.tabs.returnedFromBranch",
-        defaultLabel: "Returned (Branch)",
+        label: "claimSummaries.tabs.entered", 
+        defaultLabel: "Entered",
         type: "claim",
-        filter: { "claimStatus": { "value": 1, "filter": "status: 3" } } 
+        filter: { "claimStatus": { "value": 0, "filter": "status: 2"}
+        } 
       },
       {
         id: 2,
-        label: "claimSummaries.tabs.returnedFromFacility",
-        defaultLabel: "Returned (Facility)",
+        label: "claimSummaries.tabs.returnedFromBranch",
+        defaultLabel: "Returned (Branch)",
         type: "claim",
-        filter: { "claimStatus": { "value": 1, "filter": "status: 3" } } 
+        filter: { "claimStatus": { "value": 1, "filter": "status: 18" } } 
       },
       {
         id: 3,
-        label: "claimSummaries.tabs.submitted",
-        defaultLabel: "Submitted",
+        label: "claimSummaries.tabs.returnedFromFacility",
+        defaultLabel: "Returned (Facility)",
         type: "claim",
-        filter: { "claimStatus": { "value": 2, "filter": "status: 2" } }
+        filter: { "claimStatus": { "value": 1, "filter": "status: 17" } } 
       },
       {
         id: 4,
+        label: "claimSummaries.tabs.submitted",
+        defaultLabel: "Submitted",
+        type: "claim",
+        filter: { "claimStatus": { "value": 2, "filter": "status: 19" } }
+      },
+      {
+        id: 5, 
+        label : "claimSummaries.tabs.resubmitted",
+        defaultLabel : "Resubmitted",
+        type : "claim",
+        filter : { "claimStatus" : { "value" : 1, "filter" : "status: 20" } }
+      },
+      {
+        id: 6,
         label: "claimSummaries.tabs.rejected",
         defaultLabel: "Rejected",
         type: "claim",
-        filter: { "claimStatus": { "value": 3, "filter": "status: 4" } }
+        filter: { "claimStatus": { "value": 3, "filter": "status: 1" } }
       }
     ];
     
@@ -114,6 +129,7 @@ class HealthFacilitiesPage extends Component {
       resetKey: this.state.resetKey + 1 
     });
     this.props.clearCurrentPaginationPage();
+    this.props.selectHealthFacility(null);
   };
 
   canSubmitSelected = (selection) =>

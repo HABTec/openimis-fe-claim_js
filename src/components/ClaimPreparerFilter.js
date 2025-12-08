@@ -172,6 +172,7 @@ class Head extends Component {
                 value={this._filterValue("region")}
                 withNull={true}
                 onChange={this._onChangeRegion}
+                readOnly = {true}
               />
             </Grid>
           }
@@ -188,6 +189,7 @@ class Head extends Component {
                 withNull={true}
                 reset={this.state.reset}
                 onChange={this._onChangeDistrict}
+                readOnly = {true}
               />
             </Grid>
           }
@@ -204,6 +206,7 @@ class Head extends Component {
                 district={this._filterValue("district")}
                 reset={this.state.reset}
                 onChange={this._onChangeHealthFacility}
+                readOnly = {true}
               />
             </Grid>
           }
