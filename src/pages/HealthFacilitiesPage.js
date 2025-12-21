@@ -17,7 +17,7 @@ import {
   Helmet,
   coreAlert,
   clearCurrentPaginationPage,
-  PublishedComponent
+  PublishedComponent,
 } from "@openimis/fe-core";
 import ClaimPreparerSearcher from "../components/ClaimPreparerSearcher";
 import { submit, del, selectHealthFacility, submitAll, selectClaimAdmin } from "../actions";
@@ -31,16 +31,16 @@ const styles = (theme) => ({
   fab: theme.fab,
   tabsRoot: {
     marginBottom: theme.spacing(2),
-    backgroundColor: theme.palette.background.paper, 
+    backgroundColor: theme.palette.background.paper,
     borderRadius: 4,
   },
   tabsFlexContainer: {
-    display: 'flex'
+    display: "flex",
   },
   tabItem: {
     flexGrow: 1,
-    maxWidth: 'none'
-  }
+    maxWidth: "none",
+  },
 });
 
 class HealthFacilitiesPage extends Component {
@@ -50,66 +50,67 @@ class HealthFacilitiesPage extends Component {
     this.tabDefinitions = [
       {
         id: 0,
-        label: "claimSummaries.tabs.checkedIn", 
+        label: "claimSummaries.tabs.checkedIn",
         defaultLabel: "Checked-In",
-        type: "insuree", 
-        filter: { 
-          "isCheckedIn": { "value": true, "filter": "isCheckedIn: true" } 
-        } 
+        type: "insuree",
+        filter: {
+          "isCheckedIn": { "value": true, "filter": "isCheckedIn: true" },
+        },
       },
       {
         id: 1,
-        label: "claimSummaries.tabs.entered", 
+        label: "claimSummaries.tabs.entered",
         defaultLabel: "Entered",
         type: "claim",
-        filter: { "claimStatus": { "value": 0, "filter": "status: 2"}
-        } 
+        filter: { "claimStatus": { "value": 0, "filter": "status: 2" } },
       },
       {
         id: 2,
         label: "claimSummaries.tabs.returnedFromBranch",
         defaultLabel: "Returned (Branch)",
         type: "claim",
-        filter: { "claimStatus": { "value": 1, "filter": "status: 18" } } 
+        filter: { "claimStatus": { "value": 1, "filter": "status: 18" } },
       },
       {
         id: 3,
         label: "claimSummaries.tabs.returnedFromFacility",
         defaultLabel: "Returned (Facility)",
         type: "claim",
-        filter: { "claimStatus": { "value": 1, "filter": "status: 17" } } 
+        filter: { "claimStatus": { "value": 2, "filter": "status: 17" } },
       },
       {
         id: 4,
         label: "claimSummaries.tabs.submitted",
         defaultLabel: "Submitted",
         type: "claim",
-        filter: { "claimStatus": { "value": 2, "filter": "status: 19" } }
+        filter: { "claimStatus": { "value": 3, "filter": "statuses: [19, 4, 23]" } },
       },
       {
-        id: 5, 
-        label : "claimSummaries.tabs.resubmitted",
-        defaultLabel : "Resubmitted",
-        type : "claim",
-        filter : { "claimStatus" : { "value" : 1, "filter" : "status: 20" } }
+        id: 5,
+        label: "claimSummaries.tabs.resubmitted",
+        defaultLabel: "Resubmitted",
+        type: "claim",
+        filter: { "claimStatus": { "value": 4, "filter": "statuses: [20, 21]" } },
       },
       {
         id: 6,
         label: "claimSummaries.tabs.rejected",
         defaultLabel: "Rejected",
         type: "claim",
-        filter: { "claimStatus": { "value": 3, "filter": "status: 1" } }
-      }
+        filter: { "claimStatus": { "value": 5, "filter": "status: 1" } },
+      },
     ];
-    
-    let defaultFilters = props.modulesManager.getConf("fe-claim", "healthFacilities.defaultFilters", 
-      this.tabDefinitions[0].filter
+
+    let defaultFilters = props.modulesManager.getConf(
+      "fe-claim",
+      "healthFacilities.defaultFilters",
+      this.tabDefinitions[0].filter,
     );
     this.canSubmitClaimWithZero = props.modulesManager.getConf("fe-claim", "canSubmitClaimWithZero", false);
     this.state = {
       selectedTab: 0,
       confirmedAction: null,
-      resetKey: 0, 
+      resetKey: 0,
     };
   }
 
@@ -126,7 +127,7 @@ class HealthFacilitiesPage extends Component {
     this.setState({
       selectedTab: newValue,
       currentFilters: this.tabDefinitions[newValue].filter,
-      resetKey: this.state.resetKey + 1 
+      resetKey: this.state.resetKey + 1,
     });
     this.props.clearCurrentPaginationPage();
     this.props.selectHealthFacility(null);
@@ -135,14 +136,14 @@ class HealthFacilitiesPage extends Component {
   canSubmitSelected = (selection) =>
     !!selection &&
     selection.length &&
-    selection.filter((s) => (s.status === 2 || s.status === 1) && (!!this.canSubmitClaimWithZero || s.claimed > 0)).length ===
-      selection.length;
+    selection.filter((s) => (s.status === 2 || s.status === 1) && (!!this.canSubmitClaimWithZero || s.claimed > 0))
+      .length === selection.length;
 
   canSubmitAll = (selection) => !selection || selection.length == 0;
 
   submitSelected = (selection) => {
     // For both intial submission and resubmission
-    const isResubmit = selection[0].status === 1; 
+    const isResubmit = selection[0].status === 1;
     const labelKey = isResubmit ? "ResubmitClaim.mutationLabel" : "SubmitClaim.mutationLabel";
     const pluralLabelKey = isResubmit ? "ResubmitClaims.mutationLabel" : "SubmitClaims.mutationLabel";
     if (selection.length === 1) {
@@ -208,7 +209,25 @@ class HealthFacilitiesPage extends Component {
   };
 
   onDoubleClick = (c, newTab = false) => {
-    historyPush(this.props.modulesManager, this.props.history, "claim.route.claimEdit", [c.uuid], newTab);
+    const { modulesManager, history } = this.props;
+    const { selectedTab } = this.state;
+
+    const navigationState = {
+      claimContext: {
+        page: "HealthFacilitiesPage",
+        tabId: selectedTab,
+        claimStatus: c.status,
+      },
+    };
+
+    // Build the route path for the edit page (same approach you used for insuree)
+    const path = modulesManager?.getRoutePath
+      ? modulesManager.getRoutePath("claim.route.claimEdit", [c.uuid])
+      : `/claim/healthFacilities/claim/${c.uuid}`;
+
+    // Use history.push to attach state reliably
+    history.push(path, navigationState);
+
   };
 
   onInsureeDoubleClick = (insuree, newTab = false) => {
@@ -216,16 +235,16 @@ class HealthFacilitiesPage extends Component {
     if (!this.props.claimAdmin) {
       this.props.coreAlert(
         formatMessage(this.props.intl, "claim", "validation.error"),
-        formatMessage(this.props.intl, "claim", "newClaim.adminAndHFRequired")
+        formatMessage(this.props.intl, "claim", "newClaim.adminAndHFRequired"),
       );
       return;
     }
 
-   const path = this.props.modulesManager?.getRoutePath
-  ? this.props.modulesManager.getRoutePath("claim.route.claimEdit")
-  : "/claim/healthFacilities/claim/";
+    const path = this.props.modulesManager?.getRoutePath
+      ? this.props.modulesManager.getRoutePath("claim.route.claimEdit")
+      : "/claim/healthFacilities/claim/";
 
-  this.props.history.push(path, { preSelectedInsuree: insuree });
+    this.props.history.push(path, { preSelectedInsuree: insuree });
   };
 
   onAdd = () => {
@@ -262,17 +281,29 @@ class HealthFacilitiesPage extends Component {
       if (claimAdmin.healthFacility) {
         const hf = claimAdmin.healthFacility;
         if (hf.uuid) {
-          defaultFilters.healthFacility = { id: "healthFacility", value: hf, filter: `healthFacility_Uuid: "${hf.uuid}"` };
+          defaultFilters.healthFacility = {
+            id: "healthFacility",
+            value: hf,
+            filter: `healthFacility_Uuid: "${hf.uuid}"`,
+          };
         }
         if (hf.location) {
           const district = hf.location;
           if (district.uuid) {
-            defaultFilters.district = { id: "district", value: district, filter: `healthFacility_Location_Uuid: "${district.uuid}"` };
+            defaultFilters.district = {
+              id: "district",
+              value: district,
+              filter: `healthFacility_Location_Uuid: "${district.uuid}"`,
+            };
           }
           if (district.parent) {
             const region = district.parent;
             if (region.uuid) {
-              defaultFilters.region = { id: "region", value: region, filter: `healthFacility_Location_Parent_Uuid: "${region.uuid}"` };
+              defaultFilters.region = {
+                id: "region",
+                value: region,
+                filter: `healthFacility_Location_Parent_Uuid: "${region.uuid}"`,
+              };
             }
           }
         }
@@ -288,10 +319,10 @@ class HealthFacilitiesPage extends Component {
     const isInsureeTab = currentTabDef.type === "insuree";
 
     const preparerFilters = this.getPreparerDefaultFilters();
-    
-    const mergedDefaultFilters = isInsureeTab 
-        ? { ...currentTabDef.filter } 
-        : { ...currentTabDef.filter, ...preparerFilters }; 
+
+    const mergedDefaultFilters = isInsureeTab
+      ? { ...currentTabDef.filter }
+      : { ...currentTabDef.filter, ...preparerFilters };
     if (!rights.filter((r) => r >= RIGHT_ADD && r <= RIGHT_SUBMIT).length) return null;
     let actions = [];
     const isActionableTab = !isInsureeTab && (selectedTab === 1 || selectedTab === 2);
@@ -313,7 +344,7 @@ class HealthFacilitiesPage extends Component {
         });
       }
     }
-    
+
     const dynamicCacheKey = `claimHealthFacilitiesPageFiltersCache_${selectedTab}`;
     return (
       <div className={classes.page}>
@@ -325,53 +356,53 @@ class HealthFacilitiesPage extends Component {
             onChange={this.handleTabChange}
             indicatorColor="primary"
             textColor="primary"
-            variant="scrollable" 
+            variant="scrollable"
             scrollButtons="auto"
             className={classes.tabsFlexContainer}
           >
             {this.tabDefinitions.map((tab) => (
-              <Tab 
-                key={tab.id} 
-                label={formatMessage(intl, "claim", tab.label, tab.defaultLabel)} 
+              <Tab
+                key={tab.id}
+                label={formatMessage(intl, "claim", tab.label, tab.defaultLabel)}
                 className={classes.tabItem}
               />
             ))}
           </Tabs>
         </Paper>
 
-        {isInsureeTab ? (<React.Fragment>
-        
-        <Paper className={classes.tabsRoot} style={{ padding: 16 }}>
-          <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={4}>
-              <PublishedComponent
-                pubRef="claim.ClaimAdminPicker"
-                label={formatMessage(intl, "claim", "ClaimFilter.claimAdmin")}
-                value={this.props.claimAdmin} 
-                onChange={(admin) => {
-                    this.props.selectClaimAdmin(admin);
-                    
-                    if(admin && admin.healthFacility){
-                        this.props.selectHealthFacility(admin.healthFacility);
-                    }
-                }}
-                required={true}
-              />
-            </Grid>
-            {/* Optional: Add Health Facility Picker if I need it*/}
-          </Grid>
-        </Paper>
+        {isInsureeTab ? (
+          <React.Fragment>
+            <Paper className={classes.tabsRoot} style={{ padding: 16 }}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={4}>
+                  <PublishedComponent
+                    pubRef="claim.ClaimAdminPicker"
+                    label={formatMessage(intl, "claim", "ClaimFilter.claimAdmin")}
+                    value={this.props.claimAdmin}
+                    onChange={(admin) => {
+                      this.props.selectClaimAdmin(admin);
 
-        <PublishedComponent
-          pubRef="insuree.components.InsureeSearcher"
-          key={`insuree-searcher-${selectedTab}-${resetKey}`}
-          defaultFilters={mergedDefaultFilters}
-          cacheFiltersKey={dynamicCacheKey}
-          onDoubleClick={rights.includes(RIGHT_LOAD) ? this.onInsureeDoubleClick : null}
-          hideFilters={true}
-          contributionKey="insuree.InsureeSearcher"
-        />
-      </React.Fragment>
+                      if (admin && admin.healthFacility) {
+                        this.props.selectHealthFacility(admin.healthFacility);
+                      }
+                    }}
+                    required={true}
+                  />
+                </Grid>
+                {/* Optional: Add Health Facility Picker if I need it*/}
+              </Grid>
+            </Paper>
+
+            <PublishedComponent
+              pubRef="insuree.components.InsureeSearcher"
+              key={`insuree-searcher-${selectedTab}-${resetKey}`}
+              defaultFilters={mergedDefaultFilters}
+              cacheFiltersKey={dynamicCacheKey}
+              onDoubleClick={rights.includes(RIGHT_LOAD) ? this.onInsureeDoubleClick : null}
+              hideFilters={true}
+              contributionKey="insuree.InsureeSearcher"
+            />
+          </React.Fragment>
         ) : (
           <ClaimPreparerSearcher
             key={`searcher-${selectedTab}-${resetKey}`}

@@ -17,6 +17,14 @@ function reducer(
     fetchingClaims: false,
     fetchedClaims: false,
     errorClaims: null,
+    returnedClaimReasons: null,
+    fetchingReturnedClaimReasons: false,
+    fetchedReturnedClaimReasons: false,
+    errorReturnedClaimReasons: null,
+    fetchingReturnReasons: false,
+    fetchedReturnReasons: false,
+    returnReasons: [],
+    errorReturnReasons: null,
     claims: null,
     claimsPageInfo: { totalCount: 0 },
     fetchingClaim: false,
@@ -150,6 +158,31 @@ function reducer(
         fetchedClaim: false,
         claim: null,
         errorClaim: null,
+      };
+    case "CLAIM_RETURN_REASONS_REQ":
+      return {
+        ...state,
+        fetchingReturnReasons: true,
+        fetchedReturnReasons: false,
+        returnReasons: null,
+        errorReturnReasons: null,
+      };
+
+    case "CLAIM_RETURN_REASONS_RESP":
+      return {
+        ...state,
+        fetchingReturnReasons: false,
+        fetchedReturnReasons: true,
+        returnReasons:
+          action.payload?.data?.claims?.edges?.[0]?.node?.returnReasons || [],
+        errorReturnReasons: formatGraphQLError(action.payload),
+      };
+
+    case "CLAIM_RETURN_REASONS_ERR":
+      return {
+        ...state,
+        fetchingReturnReasons: false,
+        errorReturnReasons: action.payload,
       };
     case "CLAIM_CLAIM_REQ":
       return {
@@ -350,6 +383,8 @@ function reducer(
         return {
           ...dispatchMutationReq(state, action),
           checkingIn: true,
+          checkedIn: state.checkedIn,
+          persistedCheckInStatus: state.persistedCheckInStatus,
         };
       }
       return dispatchMutationReq(state, action);
@@ -362,8 +397,8 @@ function reducer(
         submittingMutation: false,
         alert: {
           type: "info",
-          message: "Insuree checked in successfully"
-        }
+          message: "Insuree checked in successfully",
+        },
       };
     case "CLAIM_MUTATION_ERR":
       if (action.clientMutationLabel === "insureeCheckIn") {
@@ -371,6 +406,14 @@ function reducer(
           ...dispatchMutationErr(state, action),
           checkingIn: false,
           checkedIn: false,
+          persistedCheckInStatus: state.persistedCheckInStatus,
+          alert: {
+            type: "error",
+            message:
+              (action.payload && action.payload.errors && action.payload.errors.length > 0)
+                ? action.payload.errors.map(e => e.message).join(", ")
+                : "Failed to check-in",
+          },
         };
       }
       return dispatchMutationErr(state, action);
@@ -378,7 +421,7 @@ function reducer(
     case "CLAIM_INSUREE_CHECKIN_STATUS_REQ":
       return {
         ...state,
-        persistedCheckInStatus: null, 
+        persistedCheckInStatus: null,
       };
 
     case "CLAIM_INSUREE_CHECKIN_STATUS_RESP":
@@ -395,12 +438,12 @@ function reducer(
         ...state,
         checkingIn: false,
         checkedIn: false,
-        persistedCheckInStatus: false, 
+        persistedCheckInStatus: false,
         submittingMutation: false,
         alert: {
           type: "info",
-          message: "Check-in removed successfully"
-        }
+          message: "Check-in removed successfully",
+        },
       };
     case "CLAIM_CREATE_CLAIM_RESP":
       return dispatchMutationResp(state, "createClaim", action);
@@ -408,6 +451,8 @@ function reducer(
       return dispatchMutationResp(state, "updateClaim", action);
     case "CLAIM_SUBMIT_CLAIMS_RESP":
       return dispatchMutationResp(state, "submitClaims", action);
+    case "CLAIM_SUBMIT_TO_REVIEW_RESP":
+      return dispatchMutationResp(state, "changeClaimsStatus", action);
     case "CLAIM_DELETE_CLAIMS_RESP":
       return dispatchMutationResp(state, "deleteClaims", action);
     case "CLAIM_SELECT_CLAIMS_FOR_FEEDBACK_RESP":
@@ -436,6 +481,8 @@ function reducer(
       return dispatchMutationResp(state, "updateClaimAttachment", action);
     case "CLAIM_DELETE_CLAIM_ATTACHMENT_RESP":
       return dispatchMutationResp(state, "deleteClaimAttachment", action);
+    case "CLAIM_RESUBMIT_CLAIM_RESP":
+      return dispatchMutationResp(state, "resubmitClaim", action);
     case "CORE_ALERT_CLEAR":
       var s = { ...state };
       delete s.alert;
@@ -449,6 +496,40 @@ function reducer(
       return {
         ...state,
         generating: false,
+      };
+    
+    case "CLAIM_RETURNED_CLAIM_REASONS_REQ":
+      return {
+        ...state,
+        fetchingReturnedClaimReasons: true,
+        fetchedReturnedClaimReasons: false,
+        returnedClaimReasons: null,
+        errorReturnedClaimReasons: null,
+      };
+
+    case "CLAIM_RETURNED_CLAIM_REASONS_RESP":
+      return {
+        ...state,
+        fetchingReturnedClaimReasons: false,
+        fetchedReturnedClaimReasons: true,
+        returnedClaimReasons: action.payload.data.returnedClaimsReason,
+        errorReturnedClaimReasons: formatGraphQLError(action.payload),
+      };
+
+    case "CLAIM_RETURNED_CLAIM_REASONS_ERR":
+      return {
+        ...state,
+        fetchingReturnedClaimReasons: false,
+        errorReturnedClaimReasons: formatServerError(action.payload),
+      };
+    
+    case "CLAIM_RETURN_REASONS_CLEAR":
+      return {
+        ...state,
+        returnReasons: [],
+        fetchingClaimReturnReasons: false,
+        fetchedClaimReturnReasons: false,
+        errorReturnReasons: null,
       };
     default:
       return state;
