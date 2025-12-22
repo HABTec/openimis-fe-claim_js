@@ -16,7 +16,7 @@ import {
 } from "@openimis/fe-core";
 
 import ClaimPreparerSearcher from "../components/ClaimPreparerSearcher";
-import { fetchClaimSummaries, selectHealthFacility, submitToBranch, checkClaimsReturnHistory } from "../actions";
+import { fetchClaimSummaries, selectHealthFacility, submitToBranch, resubmitToBranch } from "../actions";
 import {
   RIGHT_CLAIMREVIEW,
   CLAIM_APPROVAL_FILTER_CONTRIBUTION_KEY,
@@ -139,38 +139,9 @@ class ClaimApprovalPage extends Component {
     );
   };
 
-  // submitSelectedToBranch = (selection) => {
-  //   const { intl, submitToBranch, fetchClaimReturnReasons, modulesManager } = this.props;
-  //   const { selectedTab } = this.state;
-  //   const ids = selection.map((c) => c.uuid);
-
-  //   // Decide which action to use based on the tab
-  //   const isResubmittedTab = selectedTab === 1;
-  //   const action = isResubmittedTab ? () => submitToBranch(ids, 21) : () => submitToBranch(ids, 4);
-
-  //   action().then(() => {
-  //     this.setState({ resetKey: this.state.resetKey + 1 });
-  //     this.props.coreAlert(
-  //       formatMessage(
-  //         intl,
-  //         "claim",
-  //         isResubmittedTab ? "resubmitToBranch.success.title" : "submitToBranch.success.title",
-  //         "Success",
-  //       ),
-  //       formatMessage(
-  //         intl,
-  //         "claim",
-  //         isResubmittedTab ? "resubmitToBranch.success.message" : "submitToBranch.success.message",
-  //         "Claims submitted to branch successfully",
-  //       ),
-  //     );
-  //   });
-  // };
-
   submitSelectedToBranch = (selection) => {
-    const { intl, submitToBranch, checkClaimsReturnHistory, coreAlert } = this.props;
+    const { intl, submitToBranch, resubmitToBranch, coreAlert } = this.props;
     const { selectedTab } = this.state;
-    const ids = selection.map((c) => c.uuid);
 
     const handleSuccess = () => {
       this.setState({ resetKey: this.state.resetKey + 1 });
@@ -181,38 +152,37 @@ class ClaimApprovalPage extends Component {
     };
 
     if (selectedTab === 1) {
-      checkClaimsReturnHistory(ids).then((response) => {
-        const claimsData = response.data?.claims?.edges?.map((edge) => edge.node) || [];
+      const idsToResubmit = [];
+      const idsToSubmit = []; 
 
-        const idsToResubmit = [];
-        const idsToSubmit = [];
+      selection.forEach((claim) => {
+        const hasBranchReturn = claim.returnReasons && claim.returnReasons.some((r) => r.returnType === 18);
 
-        claimsData.forEach((claim) => {
-          const hasBranchReturn = claim.returnReasons && claim.returnReasons.some((r) => r.returnType === 18);
-
-          if (hasBranchReturn) {
-            idsToResubmit.push(claim.uuid);
-          } else {
-            idsToSubmit.push(claim.uuid);
-          }
-        });
-
-        const promises = [];
-
-        if (idsToResubmit.length > 0) {
-          promises.push(submitToBranch(idsToResubmit, 21));
+        if (hasBranchReturn) {
+          idsToResubmit.push(claim.uuid);
+        } else {
+          idsToSubmit.push(claim.uuid);
         }
+      });
 
-        if (idsToSubmit.length > 0) {
-          promises.push(submitToBranch(idsToSubmit, 4));
-        }
+      const promises = [];
 
+      if (idsToResubmit.length > 0) {
+        promises.push(resubmitToBranch(idsToResubmit, 21));
+      }
+
+      if (idsToSubmit.length > 0) {
+        promises.push(submitToBranch(idsToSubmit));
+      }
+
+      if (promises.length > 0) {
         Promise.all(promises).then(() => {
           handleSuccess();
         });
-      });
+      }
     } else {
-      submitToBranch(ids, 4).then(() => {
+      const ids = selection.map((c) => c.uuid);
+      submitToBranch(ids).then(() => {
         handleSuccess();
       });
     }
@@ -286,9 +256,9 @@ const mapDispatchToProps = (dispatch) => {
       fetchClaimSummaries,
       selectHealthFacility,
       submitToBranch,
+      resubmitToBranch,
       clearCurrentPaginationPage,
       coreAlert,
-      checkClaimsReturnHistory,
     },
     dispatch,
   );

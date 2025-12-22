@@ -22,11 +22,12 @@ import {
   fetchPredefinedClaimReasons,
   submitToFacilityHead,
   submitToBranch,
+  resubmitToBranch,
   returnClaim,
   resubmitClaim,
   fetchClaim,
   fetchClaimReturnReasons,
-  removeCheckInInsuree,
+  // removeCheckInInsuree,
   clearClaimReturnReasons,
 } from "../actions";
 import {
@@ -263,10 +264,9 @@ class ClaimEditWrapper extends Component {
         action = this.props.submitToBranch;
         clientMutationLabel = "SubmitToBranch";
         successMessageKey = "claim.action.submit.successMessage";
-        returnType = 4;
         break;
       case "RESUBMIT_BRANCH":
-        action = this.props.submitToBranch;
+        action = this.props.resubmitToBranch;
         clientMutationLabel = "ResubmitToBranch";
         successMessageKey = "claim.action.resubmit.successMessage";
         returnType = 21;
@@ -291,7 +291,7 @@ class ClaimEditWrapper extends Component {
         );
       } else if (type === "RESUBMIT_HF") {
         resp = await action(claim.uuid, comment, returnType, clientMutationLabel, clientMutationDetails);
-      } else if (type === "RESUBMIT_BRANCH" || type === "SUBMIT_BRANCH") {
+      } else if (type === "RESUBMIT_BRANCH") {
         resp = await action(claimUuids, returnType, clientMutationLabel, clientMutationDetails);
       } else {
         resp = await action(claimUuids, clientMutationLabel, clientMutationDetails);
@@ -299,9 +299,9 @@ class ClaimEditWrapper extends Component {
       if (resp?.payload?.errors?.length) {
         throw new Error(resp.payload.errors[0].message);
       }
-      if (type === "SUBMIT_HF") {
-        this.props.removeCheckInInsuree(this.props.modulesManager, claim.insuree.uuid);
-      }
+      // if (type === "SUBMIT_HF") {
+      //   this.props.removeCheckInInsuree(this.props.modulesManager, claim.insuree.uuid);
+      // }
 
       coreAlert(
         formatMessage(intl, "claim", "claim.action.success"),
@@ -505,11 +505,12 @@ const mapDispatchToProps = (dispatch) => {
       coreAlert,
       submitToFacilityHead,
       submitToBranch,
+      resubmitToBranch,
       resubmitClaim,
       fetchClaim,
       returnClaim,
       fetchClaimReturnReasons,
-      removeCheckInInsuree,
+      // removeCheckInInsuree,
       clearClaimReturnReasons,
     },
     dispatch,

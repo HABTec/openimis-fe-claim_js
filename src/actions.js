@@ -159,6 +159,7 @@ export function fetchClaimSummaries(mm, filters, withAttachmentsCount) {
     "approved",
     "status",
     "restoreId",
+    "returnReasons { id returnType}",
     "healthFacility { id uuid name code }",
     "insuree" + mm.getProjection("insuree.InsureePicker.projection"),
     "preAuthorization",
@@ -777,11 +778,24 @@ export function clearAlert() {
   };
 }
 
-export function submitToBranch(uuids, returnType, clientMutationLabel ="submitToBranch", clientMutationDetails = null) {
+export function resubmitToBranch(uuids, returnType, clientMutationLabel ="resubmitToBranch", clientMutationDetails = null) {
   let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
   let status = `status: ${returnType}`;
   let input = `${claimUuids}, ${status}`;
   let mutation = formatMutation("changeClaimsStatus", input, clientMutationLabel, clientMutationDetails);
+  var requestedDateTime = new Date();
+  return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_APPROVE_CLAIMS_RESP", "CLAIM_MUTATION_ERR"], {
+    clientMutationId: mutation.clientMutationId,
+    clientMutationLabel,
+    clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+    requestedDateTime,
+  });
+}
+
+export function submitToBranch(uuids, clientMutationLabel ="submitToBranch", clientMutationDetails = null) {
+  let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
+  let input = `${claimUuids}`;
+  let mutation = formatMutation("submitClaims", input, clientMutationLabel, clientMutationDetails);
   var requestedDateTime = new Date();
   return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_APPROVE_CLAIMS_RESP", "CLAIM_MUTATION_ERR"], {
     clientMutationId: mutation.clientMutationId,
@@ -875,25 +889,4 @@ export function fetchClaimReturnReasons(mm, claimUuid){
 
 export function clearClaimReturnReasons() {
   return { type: "CLAIM_RETURN_REASONS_CLEAR" };
-}
-
-export function checkClaimsReturnHistory(uuids) {
-  return graphqlWithVariables(
-    `
-    query checkReturnHistory($uuids: [UUID]) {
-      claims(uuid_In: $uuids) {
-        edges {
-          node {
-            uuid
-            returnReasons {
-              returnType
-            }
-          }
-        }
-      }
-    }
-    `,
-    { uuids: uuids },
-    "CLAIM_CHECK_RETURN_HISTORY_BATCH"
-  );
 }
