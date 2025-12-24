@@ -88,7 +88,7 @@ class ClaimMasterPanel extends FormPanel {
     this.ComplexProductWithoutPriceImpact = props.modulesManager.getConf(
       "fe-claim",
       "claimForm.ComplexProductWithoutPriceImpact",
-      true
+      true,
     );
   }
 
@@ -304,33 +304,34 @@ class ClaimMasterPanel extends FormPanel {
             }
           />
         )}
-        {(!!edited.visitType && edited.visitType == REFERRAL) || (!!edited.patientCondition && edited.patientCondition == REFERRAL) ? (
-             <ControlledField
-             module="claim"
-             id="Claim.referHealthFacility"
-             field={
-               <Grid item xs={3} className={classes.item}>
-                 <PublishedComponent
-                   pubRef="location.HealthFacilityReferPicker"
-                   label={formatMessage(intl, "claim", "ClaimMasterPanel.referHFLabel")}
-                   value={
-                     (edited.visitType === this.claimTypeReferSymbol ? edited.referFrom : edited.referTo) ??
-                     this.EMPTY_STRING
-                   }
-                   reset={reset}
-                   readOnly={ro}
-                   required={this.isReferHFMandatory && edited.visitType === this.claimTypeReferSymbol}
-                   filterOptions={(options) =>
-                     options?.filter((option) => option.uuid !== userHealthFacilityFullPath?.uuid)
-                   }
-                   filterSelectedOptions={true}
-                   onChange={(d) => this.updateAttribute("referHF", d)}
-                 />
-               </Grid>
-             }
-           />
-        ): null}
-       
+        {(!!edited.visitType && edited.visitType == REFERRAL) ||
+        (!!edited.patientCondition && edited.patientCondition == REFERRAL) ? (
+          <ControlledField
+            module="claim"
+            id="Claim.referHealthFacility"
+            field={
+              <Grid item xs={3} className={classes.item}>
+                <PublishedComponent
+                  pubRef="location.HealthFacilityReferPicker"
+                  label={formatMessage(intl, "claim", "ClaimMasterPanel.referHFLabel")}
+                  value={
+                    (edited.visitType === this.claimTypeReferSymbol ? edited.referFrom : edited.referTo) ??
+                    this.EMPTY_STRING
+                  }
+                  reset={reset}
+                  readOnly={ro}
+                  required={this.isReferHFMandatory && edited.visitType === this.claimTypeReferSymbol}
+                  filterOptions={(options) =>
+                    options?.filter((option) => option.uuid !== userHealthFacilityFullPath?.uuid)
+                  }
+                  filterSelectedOptions={true}
+                  onChange={(d) => this.updateAttribute("referHF", d)}
+                />
+              </Grid>
+            }
+          />
+        ) : null}
+
         <ControlledField
           module="claim"
           id="Claim.code"
@@ -347,18 +348,13 @@ class ClaimMasterPanel extends FormPanel {
                 label="claim.code"
                 module="claim"
                 onChange={(code) => this.updateAttribute("code", code)}
-                readOnly={readOnly || !!forReview || !!forFeedback || this.autoGenerateClaimCode}
-                required={!this.autoGenerateClaimCode}
+                // readOnly={readOnly || !!forReview || !!forFeedback || this.autoGenerateClaimCode}
+                readOnly={true}
+                // required={!this.autoGenerateClaimCode}
                 setValidAction={claimCodeSetValid}
                 shouldValidate={this.shouldValidate}
                 validationError={codeValidationError}
-                value={
-                  this.state.data?.code
-                    ? this.state.data.code
-                    : this.autoGenerateClaimCode && !isRestored
-                    ? formatMessage(intl, "claim", "ClaimMasterPanel.autogenerate")
-                    : ""
-                }
+                value={this.state.data?.code ? this.state.data.code : ""}
                 inputProps={{
                   "maxLength": this.codeMaxLength,
                 }}

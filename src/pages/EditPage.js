@@ -27,6 +27,7 @@ class EditPage extends Component {
   };
 
   save = async (claim) => {
+    
     if (!claim.uuid) {
       this.props.createClaim(
         this.props.modulesManager,

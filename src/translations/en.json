@@ -179,7 +179,7 @@
   "claim.edit.items.status": "Status",
   "claim.edit.items.rejectionReason": "R",
   "claim.edit.claimCodeExists": "Claim code already registered",
-  "claim.CreateClaim.mutationLabel": "Create Claim - {code}",
+  "claim.CreateClaim.mutationLabel": "Create Claim",
   "claim.UpdateClaim.mutationLabel": "Update Claim - {code}",
   "claim.SubmitClaims.mutationLabel": "Submitted {count} claims",
   "claim.SubmitAllClaims.mutationLabel": "Submitted {claims} claims",
