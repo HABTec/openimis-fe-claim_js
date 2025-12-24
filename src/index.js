@@ -35,7 +35,7 @@ import ClaimsPrimaryOperationalIndicators from "./reports/ClaimsPrimaryOperation
 import ClaimInsureeSummary from "./components/ClaimInsureeSummary";
 import YesNoPicker from "./pickers/YesNoPicker";
 import PatientConditionPicker from "./pickers/PatientConditionPicker";
-import { RIGHT_ADD, RIGHT_SUBMIT, RIGHT_CLAIMREVIEW, RIGHT_PROCESS } from "./constants";
+import { RIGHT_ADD, RIGHT_SUBMIT, RIGHT_CLAIMREVIEW, RIGHT_PROCESS, RIGHT_REVIEW_PAGE, RIGHT_APPROVAL_PAGE, RIGHT_CHECKIN_PAGE, RIGHT_FACILITY_PAGE } from "./constants";
 import CheckInPage from './pages/CheckInPage';
 import CheckInInsureePage from './pages/CheckInInsureePage';
 import ClaimApprovalPage from './pages/ClaimApprovalPage';
@@ -217,28 +217,28 @@ const DEFAULT_CONFIG = {
       icon: <Keyboard />,
       route: "/claim/healthFacilities",
       id: "claim.healthFacilityClaims",
-      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+      filter: (rights) => rights.some((r) => r === RIGHT_FACILITY_PAGE),
     },
     {
       text: <FormattedMessage module="claim" id="menu.claimApproval" />,
       icon: <CheckCircle />,
       route: "/claim/claimApproval",
       id: "claim.claimApproval",
-      filter: (rights) => rights.some((r) => r === RIGHT_ADD || r === RIGHT_SUBMIT),
+      filter: (rights) => rights.some((r) => r === RIGHT_APPROVAL_PAGE),
     },
     {
       text: <FormattedMessage module="claim" id="menu.reviews" />,
       icon: <Assignment />,
       route: "/claim/reviews",
       id: "claim.reviews",
-      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+      filter: (rights) => rights.some((r) => r === RIGHT_REVIEW_PAGE),
     },
     {
       text: <FormattedMessage module="claim" id="menu.checkIn" />,
       icon: <ScreenShare />,
       route: "/claim/checkIn",
       id: "claim.checkIn",
-      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+      filter: (rights) => rights.some((r) => r === RIGHT_CHECKIN_PAGE),
     }
 ],
 };

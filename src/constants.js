@@ -50,6 +50,10 @@ export const RIGHT_UPDATE = 111010;
 export const RIGHT_PROCESS = 111011;
 export const RIGHT_RESTORE = 111012;
 export const RIGHT_CHECK = 111008
+export const RIGHT_REVIEW_PAGE = 111080;
+export const RIGHT_APPROVAL_PAGE = 111081;
+export const RIGHT_CHECKIN_PAGE = 111082;
+export const RIGHT_FACILITY_PAGE = 111083;
 
 export const CLAIMS_WITH_AT_LEAST_ENTERED_STATUS = "status_Gt: 2";
 
