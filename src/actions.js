@@ -876,6 +876,13 @@ export function fetchClaimReturnReasons(mm, claimUuid){
             predefinedReason
             returnedDate
             returnType
+            returnedBy {
+            id
+            lastName
+            email
+            uuid
+            otherNames
+            }
           }
           status
         }

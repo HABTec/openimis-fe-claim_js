@@ -70,6 +70,12 @@ const ClaimReturnComments = ({ returnReasons = [], predefinedReasons = [] }) => 
                 </Typography>
               )}
 
+              {rr.returnedBy &&(
+                <Typography variant="body2">
+                  <strong>Author:</strong> {rr.returnedBy.otherNames}
+                </Typography>
+              )}
+
               <Divider style={{ marginTop: 8 }} />
             </div>
           ))}
