@@ -405,9 +405,9 @@ class ReviewPage extends Component {
           forReview={true}
           onEditedChanged={this.handleClaimChange}
         />
-        {this.state.claim && this.state.claim.status === STATUS_FLAGGED && (
+        {/* {this.state.claim && this.state.claim.status === STATUS_FLAGGED && (
           <FinancialSummary claim={this.state.claim} />
-        )}
+        )} */}
         <ClaimReturnComments returnReasons={this.props.returnReasons} predefinedReasons={this.props.returnedReasons} />
 
         {this.renderActionPanel(context)}

@@ -794,8 +794,8 @@ export function resubmitToBranch(uuids, returnType, clientMutationLabel ="resubm
 
 export function submitToBranch(uuids, clientMutationLabel ="submitToBranch", clientMutationDetails = null) {
   let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
-  let input = `${claimUuids}`;
-  let mutation = formatMutation("submitClaims", input, clientMutationLabel, clientMutationDetails);
+  let input = `${claimUuids}, status: 4`;
+  let mutation = formatMutation("changeClaimsStatus", input, clientMutationLabel, clientMutationDetails);
   var requestedDateTime = new Date();
   return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_APPROVE_CLAIMS_RESP", "CLAIM_MUTATION_ERR"], {
     clientMutationId: mutation.clientMutationId,
