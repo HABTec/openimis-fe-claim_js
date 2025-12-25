@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, Fragment } from "react";
 import { injectIntl } from "react-intl";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
@@ -30,11 +30,22 @@ import FlagIcon from "@material-ui/icons/Flag";
 import ReplyIcon from "@material-ui/icons/Reply";
 import ClaimReturnComments from "../components/ClaimReturnComments";
 import ClaimForm from "../components/ClaimForm";
-import { saveReview, deliverReview, fetchClaim, fetchPredefinedClaimReasons, returnClaim, fetchClaimReturnReasons, clearClaimReturnReasons, changeClaimStatus } from "../actions";
+import {
+  saveReview,
+  deliverReview,
+  fetchClaim,
+  fetchPredefinedClaimReasons,
+  returnClaim,
+  fetchClaimReturnReasons,
+  clearClaimReturnReasons,
+  changeClaimStatus,
+} from "../actions";
 import _ from "lodash";
+import { STATUS_RETURNED_FROM_BRANCH } from "../constants";
+import FinancialSummary from "../components/FinancialSummary";
 
 const styles = (theme) => ({
-  page: theme.page,
+  // page: theme.page,
   root: {
     display: "flex",
     flexDirection: "column",
@@ -180,21 +191,25 @@ class ReviewPage extends Component {
 
   performAction = async (actionType) => {
     const { claim, selectedReason, comment } = this.state;
-    const { intl, saveReview, returnClaim, coreAlert, changeClaimStatus } = this.props;
+    const { intl, saveReview, returnClaim, coreAlert, changeClaimStatus, back } = this.props;
 
-    this.setState({ isSubmitting: true, close: true });
-    console.log("action type", actionType)
+    this.setState({ isSubmitting: true });
 
     try {
       let mutationLabel = "";
+      let resp;
       const claimPayload = { ...claim };
 
+      // 1. Define the success message key dynamically based on action
+      const successMessageKey = `claim.action.success.${actionType.toLowerCase()}`;
+
       if (actionType === "RETURN" || actionType === "REJECT") {
-        const type = actionType === "RETURN" ? 18 : STATUS_REJECTED; // 18 for Return, 1 for Reject
-        mutationLabel = formatMessageWithValues(intl, "claim", `${actionType}Claim.mutationLabel`, { code: claim.code });
-        
-        // Both Return and Reject use returnClaim endpoint
-        await returnClaim(claim.uuid, selectedReason, comment, type, mutationLabel);
+        const type = actionType === "RETURN" ? STATUS_RETURNED_FROM_BRANCH : STATUS_REJECTED;
+        mutationLabel = formatMessageWithValues(intl, "claim", `${actionType}Claim.mutationLabel`, {
+          code: claim.code,
+        });
+
+        resp = await returnClaim(claim.uuid, selectedReason, comment, type, mutationLabel);
       } else {
         let returnType;
         if (actionType === "APPROVE") {
@@ -205,13 +220,33 @@ class ReviewPage extends Component {
           mutationLabel = formatMessageWithValues(intl, "claim", "FlagClaim.mutationLabel", { code: claim.code });
         }
 
-        // an action
-        console.log("all here", claim.uuid, returnType, mutationLabel)
-        await changeClaimStatus([claim.uuid], returnType, mutationLabel);
+        resp = await changeClaimStatus([claim.uuid], returnType, mutationLabel);
+      }
+
+      // Check for GraphQL/Payload errors
+      if (resp?.payload?.errors?.length) {
+        throw new Error(resp.payload.errors[0].message);
+      }
+
+      // 2. Success Feedback
+      coreAlert(
+        formatMessage(intl, "claim", "claim.action.success", "Success"),
+        formatMessage(intl, "claim", successMessageKey, { code: claim.code }),
+      );
+
+      // 3. Cleanup and Navigate back
+      this.setState({ isSubmitting: false });
+
+      // If a 'back' function was passed in props, use it to close/navigate
+      if (back) {
+        back();
+      } else {
+        // Fallback navigation if back prop isn't provided
+        historyPush(this.props.modulesManager, this.props.history, "claim.route.reviews");
       }
     } catch (error) {
-      coreAlert(formatMessage(intl, "claim", "claim.action.error"), error.message || "Action Failed");
-      this.setState({ isSubmitting: false, close: false });
+      coreAlert(formatMessage(intl, "claim", "claim.action.error", "Error"), error.message || "Action Failed");
+      this.setState({ isSubmitting: false });
     }
   };
 
@@ -253,19 +288,17 @@ class ReviewPage extends Component {
     return (
       <Paper className={classes.submissionPanel} elevation={3}>
         <Grid container spacing={3}>
-
           {context.requireInputs && (
             <Fragment>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" gutterBottom>
                   {formatMessage(intl, "claim", "claim.returnReasons.title", "Reason (Mandatory for Return/Reject)")}
-                  {hasReason && (
+                </Typography>
+                {hasReason && (
                     <Button size="small" onClick={this.handleClearReason} startIcon={<ClearIcon />}>
                       {formatMessage(intl, "claim", "clear", "Clear")}
                     </Button>
                   )}
-                </Typography>
-                <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #eee", padding: "8px" }}>
                   <RadioGroup name="returnReason" value={selectedReason} onChange={this.handleReasonChange}>
                     {returnedReasons &&
                       returnedReasons.map((reason) => (
@@ -277,14 +310,13 @@ class ReviewPage extends Component {
                         />
                       ))}
                   </RadioGroup>
-                </div>
               </Grid>
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12}>
                 <TextField
                   label={formatMessage(intl, "claim", "claim.comment", "Comment (Mandatory for Return/Reject)")}
                   multiline
-                  rows={6}
+                  rows={3}
                   variant="outlined"
                   fullWidth
                   value={comment}
@@ -373,6 +405,9 @@ class ReviewPage extends Component {
           forReview={true}
           onEditedChanged={this.handleClaimChange}
         />
+        {this.state.claim && this.state.claim.status === STATUS_FLAGGED && (
+          <FinancialSummary claim={this.state.claim} />
+        )}
         <ClaimReturnComments returnReasons={this.props.returnReasons} predefinedReasons={this.props.returnedReasons} />
 
         {this.renderActionPanel(context)}
@@ -384,6 +419,7 @@ class ReviewPage extends Component {
 const mapStateToProps = (state, props) => ({
   claim_uuid: props.match.params.claim_uuid,
   claim: state.claim.claim,
+  back: props.back,
   submittingMutation: state.claim.submittingMutation,
   mutation: state.claim.mutation,
   returnedReasons: state.claim.returnedClaimReasons, // predefined Reasons
