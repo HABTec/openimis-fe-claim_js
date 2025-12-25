@@ -3,25 +3,125 @@ import { injectIntl } from "react-intl";
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 import { withTheme, withStyles } from "@material-ui/core/styles";
-import { withModulesManager, withHistory, formatMessageWithValues, historyPush, journalize } from "@openimis/fe-core";
+import {
+  withModulesManager,
+  withHistory,
+  formatMessageWithValues,
+  formatMessage,
+  historyPush,
+  journalize,
+  coreAlert,
+} from "@openimis/fe-core";
+import {
+  Grid,
+  Paper,
+  Typography,
+  Button,
+  TextField,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  CircularProgress,
+} from "@material-ui/core";
+import CheckIcon from "@material-ui/icons/Check";
+import ClearIcon from "@material-ui/icons/Clear";
+import BlockIcon from "@material-ui/icons/Block";
+import FlagIcon from "@material-ui/icons/Flag";
+import ReplyIcon from "@material-ui/icons/Reply";
+import ClaimReturnComments from "../components/ClaimReturnComments";
 import ClaimForm from "../components/ClaimForm";
-import { saveReview, deliverReview } from "../actions";
+import { saveReview, deliverReview, fetchClaim, fetchPredefinedClaimReasons, returnClaim, fetchClaimReturnReasons, clearClaimReturnReasons, changeClaimStatus } from "../actions";
 import _ from "lodash";
 
 const styles = (theme) => ({
   page: theme.page,
+  root: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  submissionPanel: {
+    padding: theme.spacing(3),
+    marginTop: theme.spacing(4),
+    // marginBottom: theme.spacing(4),
+  },
+  panelTitle: {
+    marginBottom: theme.spacing(1),
+    fontWeight: "bold",
+    fontSize: "1.1rem",
+  },
+  radioGroup: {
+    flexDirection: "column",
+  },
+  commentField: {
+    marginTop: theme.spacing(2),
+  },
+  buttonContainer: {
+    marginTop: theme.spacing(3),
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: theme.spacing(2),
+  },
+  wrapper: {
+    position: "relative",
+  },
+  buttonProgress: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginTop: -12,
+    marginLeft: -12,
+  },
 });
 
+const STATUS_REJECTED = 1;
+const STATUS_SUBMITTED = 4; // Submitted from Head
+const STATUS_VALUATED = 16; // Approved
+const STATUS_RESUBMITTED = 21; // Resubmitted from Head
+const STATUS_FLAGGED = 22;
 class ReviewPage extends Component {
   state = {
     close: false,
+    claim: null,
+    selectedReason: null,
+    comment: "",
+    isSubmitting: false,
   };
 
+  componentDidMount() {
+    this.props.fetchPredefinedClaimReasons(this.props.modulesManager);
+
+    if (this.props.claim_uuid) {
+      this.props.clearClaimReturnReasons();
+      // this.props.fetchClaim(this.props.modulesManager, this.props.claim_uuid);
+      this.props.fetchClaim(this.props.modulesManager, this.props.claim_uuid, this.props.forFeedback);
+      this.props.fetchClaimReturnReasons(this.props.modulesManager, this.props.claim_uuid);
+    }
+    this.setState({ claim: this.props.claim });
+  }
+
+  componentWillUnmount() {
+    if (this.props.clearClaimReturnReasons) {
+      this.props.clearClaimReturnReasons();
+    }
+  }
+
   componentDidUpdate(prevProps, prevState, snapshot) {
+    if (prevProps.claim?.uuid !== this.props.claim?.uuid || prevProps.claim?.status !== this.props.claim?.status) {
+      this.setState({ claim: this.props.claim });
+    }
+    const claimChanged = this.props.claim !== prevProps.claim;
+    const uuidChanged = this.props.claim?.uuid !== prevProps.claim?.uuid;
+    const hasUuid = !!this.props.claim?.uuid;
+
+    if (hasUuid && (claimChanged || uuidChanged)) {
+      this.props.clearClaimReturnReasons();
+      this.props.fetchClaimReturnReasons(this.props.modulesManager, this.props.claim.uuid);
+    }
+
     if (prevProps.submittingMutation && !this.props.submittingMutation) {
       if (this.state.close) {
-        const { history, modulesManager  } = prevProps;
-        const { customBackUri, customBackUuid } = prevProps.match?.params
+        const { history, modulesManager } = prevProps;
+        const { customBackUri, customBackUuid } = prevProps.match?.params;
         if (customBackUri) {
           historyPush(modulesManager, history, customBackUri, customBackUuid ? [customBackUuid] : null);
         } else {
@@ -30,6 +130,90 @@ class ReviewPage extends Component {
       }
     }
   }
+
+  handleClaimChange = (claim) => {
+    this.setState({ ...this.state, claim });
+  };
+
+  handleReasonChange = (event) => {
+    this.setState({ ...this.state, selectedReason: event.target.value });
+  };
+
+  handleClearReason = () => {
+    this.setState({ ...this.state, selectedReason: null });
+  };
+
+  handleCommentChange = (event) => {
+    this.setState({ ...this.state, comment: event.target.value });
+  };
+
+  getSubmissionContext() {
+    const { claim } = this.state;
+    if (!claim) return { showPanel: false };
+
+    const status = claim.status;
+    let showApprove = false;
+    let showFlag = false;
+    let showReject = false;
+    let showReturn = false;
+    let requireInputs = false;
+
+    if (status === STATUS_SUBMITTED || status === STATUS_RESUBMITTED) {
+      showApprove = true;
+      showFlag = true;
+    } else if (status === STATUS_FLAGGED) {
+      showApprove = true;
+      showReject = true;
+      showReturn = true;
+      requireInputs = true;
+    }
+
+    return {
+      showPanel: showApprove || showFlag || showReject || showReturn,
+      showApprove,
+      showFlag,
+      showReject,
+      showReturn,
+      requireInputs,
+    };
+  }
+
+  performAction = async (actionType) => {
+    const { claim, selectedReason, comment } = this.state;
+    const { intl, saveReview, returnClaim, coreAlert, changeClaimStatus } = this.props;
+
+    this.setState({ isSubmitting: true, close: true });
+    console.log("action type", actionType)
+
+    try {
+      let mutationLabel = "";
+      const claimPayload = { ...claim };
+
+      if (actionType === "RETURN" || actionType === "REJECT") {
+        const type = actionType === "RETURN" ? 18 : STATUS_REJECTED; // 18 for Return, 1 for Reject
+        mutationLabel = formatMessageWithValues(intl, "claim", `${actionType}Claim.mutationLabel`, { code: claim.code });
+        
+        // Both Return and Reject use returnClaim endpoint
+        await returnClaim(claim.uuid, selectedReason, comment, type, mutationLabel);
+      } else {
+        let returnType;
+        if (actionType === "APPROVE") {
+          returnType = STATUS_VALUATED;
+          mutationLabel = formatMessageWithValues(intl, "claim", "ApproveClaim.mutationLabel", { code: claim.code });
+        } else if (actionType === "FLAG") {
+          returnType = STATUS_FLAGGED;
+          mutationLabel = formatMessageWithValues(intl, "claim", "FlagClaim.mutationLabel", { code: claim.code });
+        }
+
+        // an action
+        console.log("all here", claim.uuid, returnType, mutationLabel)
+        await changeClaimStatus([claim.uuid], returnType, mutationLabel);
+      }
+    } catch (error) {
+      coreAlert(formatMessage(intl, "claim", "claim.action.error"), error.message || "Action Failed");
+      this.setState({ isSubmitting: false, close: false });
+    }
+  };
 
   save = (claim) => {
     if (!!claim && (!!claim.items || !!claim.services)) {
@@ -53,40 +237,175 @@ class ReviewPage extends Component {
     }
   };
 
+  renderActionPanel(context) {
+    const { classes, intl, returnedReasons } = this.props;
+    const { selectedReason, comment, isSubmitting } = this.state;
+
+    if (!context.showPanel) return null;
+
+    const hasReason = !!selectedReason;
+    const hasComment = comment && comment.trim().length > 0;
+
+    const approveDisabled = context.requireInputs && (hasReason || hasComment);
+
+    const returnRejectDisabled = context.requireInputs && (!hasReason || !hasComment);
+
+    return (
+      <Paper className={classes.submissionPanel} elevation={3}>
+        <Grid container spacing={3}>
+
+          {context.requireInputs && (
+            <Fragment>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" gutterBottom>
+                  {formatMessage(intl, "claim", "claim.returnReasons.title", "Reason (Mandatory for Return/Reject)")}
+                  {hasReason && (
+                    <Button size="small" onClick={this.handleClearReason} startIcon={<ClearIcon />}>
+                      {formatMessage(intl, "claim", "clear", "Clear")}
+                    </Button>
+                  )}
+                </Typography>
+                <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #eee", padding: "8px" }}>
+                  <RadioGroup name="returnReason" value={selectedReason} onChange={this.handleReasonChange}>
+                    {returnedReasons &&
+                      returnedReasons.map((reason) => (
+                        <FormControlLabel
+                          key={reason.code}
+                          value={String(reason.code)}
+                          control={<Radio color="primary" />}
+                          label={reason.name}
+                        />
+                      ))}
+                  </RadioGroup>
+                </div>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={formatMessage(intl, "claim", "claim.comment", "Comment (Mandatory for Return/Reject)")}
+                  multiline
+                  rows={6}
+                  variant="outlined"
+                  fullWidth
+                  value={comment}
+                  onChange={this.handleCommentChange}
+                />
+              </Grid>
+            </Fragment>
+          )}
+
+          <Grid item xs={12}>
+            <div className={classes.buttonContainer}>
+              {context.showReturn && (
+                <Button
+                  variant="contained"
+                  style={{ backgroundColor: returnRejectDisabled ? undefined : "#d32f2f", color: "#fff" }}
+                  startIcon={<ReplyIcon />}
+                  onClick={() => this.performAction("RETURN")}
+                  disabled={isSubmitting || returnRejectDisabled}
+                >
+                  {formatMessage(intl, "claim", "claim.action.return", "Return")}
+                </Button>
+              )}
+
+              {context.showReject && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<BlockIcon />}
+                  onClick={() => this.performAction("REJECT")}
+                  disabled={isSubmitting || returnRejectDisabled}
+                >
+                  {formatMessage(intl, "claim", "action.reject", "Reject")}
+                </Button>
+              )}
+
+              {context.showFlag && (
+                <Button
+                  variant="contained"
+                  style={{ backgroundColor: "#ff9800", color: "#fff" }}
+                  startIcon={<FlagIcon />}
+                  onClick={() => this.performAction("FLAG")}
+                  disabled={isSubmitting}
+                >
+                  {formatMessage(intl, "claim", "action.flag", "Flag")}
+                </Button>
+              )}
+
+              {context.showApprove && (
+                <div className={classes.wrapper}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<CheckIcon />}
+                    onClick={() => this.performAction("APPROVE")}
+                    disabled={isSubmitting || approveDisabled}
+                  >
+                    {formatMessage(intl, "claim", "action.approve", "Approve")}
+                  </Button>
+                  {isSubmitting && <CircularProgress size={24} className={classes.buttonProgress} />}
+                </div>
+              )}
+            </div>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  }
+
   render() {
-    const { classes, history, modulesManager, claim_uuid,  } = this.props;
-    const { customBackUri, customBackUuid } = this.props.match?.params
+    const { classes, history, modulesManager, claim_uuid, returnReasons, returnedReasons } = this.props;
+    const { customBackUri, customBackUuid } = this.props.match?.params;
+    const context = this.getSubmissionContext();
     return (
       <div className={classes.page}>
         <ClaimForm
           claim_uuid={claim_uuid}
           back={(e) => {
-            
             if (customBackUri) {
-
               historyPush(modulesManager, history, customBackUri, customBackUuid ? [customBackUuid] : null);
             } else {
               historyPush(modulesManager, history, "claim.route.reviews");
             }
           }}
-          save={this.save}
+          // save={this.save}
           deliverReview={this.deliverReview}
           forReview={true}
+          onEditedChanged={this.handleClaimChange}
         />
+        <ClaimReturnComments returnReasons={this.props.returnReasons} predefinedReasons={this.props.returnedReasons} />
+
+        {this.renderActionPanel(context)}
       </div>
     );
   }
 }
 
-
 const mapStateToProps = (state, props) => ({
   claim_uuid: props.match.params.claim_uuid,
+  claim: state.claim.claim,
   submittingMutation: state.claim.submittingMutation,
   mutation: state.claim.mutation,
+  returnedReasons: state.claim.returnedClaimReasons, // predefined Reasons
+  returnReasons: state.claim.returnReasons, // returned comments
 });
 
 const mapDispatchToProps = (dispatch) => {
-  return bindActionCreators({ deliverReview, saveReview, journalize }, dispatch);
+  return bindActionCreators(
+    {
+      deliverReview,
+      saveReview,
+      journalize,
+      fetchClaim,
+      fetchPredefinedClaimReasons,
+      returnClaim,
+      fetchClaimReturnReasons,
+      clearClaimReturnReasons,
+      coreAlert,
+      changeClaimStatus,
+    },
+    dispatch,
+  );
 };
 
 export default withHistory(

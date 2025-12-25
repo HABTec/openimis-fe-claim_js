@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { bindActionCreators } from "redux";
 import { connect } from "react-redux";
 import { injectIntl } from "react-intl";
-import { Grid, InputAdornment, IconButton, Tooltip } from "@material-ui/core";
+import { Grid, InputAdornment, IconButton, Tooltip, Tabs, Tab, Paper } from "@material-ui/core";
 import FilterIcon from "@material-ui/icons/FilterList";
 import FeedbackIcon from "@material-ui/icons/SpeakerNotesOutlined";
 import ReviewIcon from "@material-ui/icons/SupervisorAccount";
@@ -47,6 +47,18 @@ const styles = (theme) => ({
   },
   toggledButton: {
     backgroundColor: theme.palette.toggledButton,
+  },
+  tabsRoot: {
+    marginBottom: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: 4,
+  },
+  tabsFlexContainer: {
+    display: "flex",
+  },
+  tabItem: {
+    flexGrow: 1,
+    maxWidth: "none",
   },
 });
 
@@ -306,13 +318,54 @@ const RandomAndValueFilters = withModulesManager(
 class ReviewsPage extends Component {
   constructor(props) {
     super(props);
+    this.tabDefinitions = [
+      {
+        id: 0,
+        label: "claimSummaries.tabs.submittedFromHead",
+        defaultLabel: "Submitted From Head",
+        type: "claim",
+        filter: { "claimStatus": { "value": 0, "filter": "status: 4" } },
+      },
+      {
+        id: 1,
+        label: "claimSummaries.tabs.flagged",
+        defaultLabel: "Flagged",
+        type: "claim",
+        filter: { "claimStatus": { "value": 2, "filter": "status: 22" } },
+      },
+      {
+        id: 2,
+        label: "claimSummaries.tabs.resubmittedFromHead",
+        defaultLabel: "Resubmitted From Head",
+        type: "claim",
+        filter: { "claimStatus": { "value": 2, "filter": "status: 21" } },
+      },
+      {
+        id: 3,
+        label: "claimSummaries.tabs.approved",
+        defaultLabel: "Approved",
+        type: "claim",
+        filter: { "claimStatus": { "value": 3, "filter": "status: 16" } },
+      },
+      {
+        id: 4,
+        label: "claimSummaries.tabs.rejected",
+        defaultLabel: " Rejected",
+        type: "claim",
+        filter: { "claimStatus": { "value": 4, "filter": "status: 1" } },
+      },
+    ];
+
+    const defaultFilters = props.modulesManager.getConf(
+      "fe-claim",
+      "reviews.defaultFilters",
+      this.tabDefinitions[0].filter,
+    );
+
     this.state = {
-      defaultFilters: props.modulesManager.getConf("fe-claim", "reviews.defaultFilters", {
-        "claimStatus": {
-          "value": 4,
-          "filter": "status: 4",
-        },
-      }),
+      selectedTab: 0,
+      currentFilters: defaultFilters,
+      resetKey: 0,
     };
   }
 
@@ -375,6 +428,18 @@ class ReviewsPage extends Component {
       "SkipClaimsFeedback.mutationLabel",
       this.props.skipFeedback,
     );
+  };
+
+  handleTabChange = (event, newValue) => {
+    this.setState({
+      selectedTab: newValue,
+      currentFilters: this.tabDefinitions[newValue].filter,
+      resetKey: this.state.resetKey + 1,
+    });
+
+    this.props.clearCurrentPaginationPage();
+    // Use newValue instead of this.state.selectedTab for accurate logging
+    console.log("Updated to tab:", newValue);
   };
 
   canMarkSelectedForReview = (selection) =>
@@ -597,6 +662,9 @@ class ReviewsPage extends Component {
 
   render() {
     const { classes, rights } = this.props;
+    const { selectedTab, resetKey } = this.state;
+    const currentFilters = this.state.currentFilters
+    console.log("branch state look", this.state, currentFilters.claimStatus)
     if (!rights.filter((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS).length) return null;
     let actions = [];
     if (rights.includes(RIGHT_UPDATE)) {
@@ -646,12 +714,35 @@ class ReviewsPage extends Component {
       });
     }
 
+    const dynamicCacheKey = `claimReviewsPageFiltersCache_${selectedTab}`;
     return (
       <div className={classes.page}>
         <Helmet title={formatMessage(this.props.intl, "claim", "claim.reviews.page.title")} />
+        <Paper className={classes.tabsRoot} square>
+          <Tabs
+            value={selectedTab}
+            onChange={this.handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            className={classes.tabsFlexContainer}
+          >
+            {this.tabDefinitions.map((tab) => (
+              <Tab
+                key={tab.id}
+                label={formatMessage(this.props.intl, "claim", tab.label, tab.defaultLabel)}
+                className={classes.tabItem}
+              />
+            ))}
+          </Tabs>
+        </Paper>
+
         <ClaimSearcher
-          defaultFilters={this.state.defaultFilters}
-          cacheFiltersKey="claimReviewsPageFiltersCache"
+          key={`reviewSearcher- ${selectedTab}-${resetKey}`}
+          // defaultFilters={this.state.defaultFilters}
+          defaultFilters={currentFilters}
+          cacheFiltersKey={dynamicCacheKey}
           FilterExt={RandomAndValueFilters}
           actions={actions}
           onDoubleClick={rights.includes(RIGHT_UPDATE) ? this.onDoubleClick : null}

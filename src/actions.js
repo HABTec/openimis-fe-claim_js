@@ -897,3 +897,19 @@ export function fetchClaimReturnReasons(mm, claimUuid){
 export function clearClaimReturnReasons() {
   return { type: "CLAIM_RETURN_REASONS_CLEAR" };
 }
+
+export function changeClaimStatus(uuids, returnType, clientMutationLabel , clientMutationDetails = null) {
+  let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
+  let status = `status: ${returnType}`; 
+  let input = `${claimUuids}, ${status}`;
+  
+  let mutation = formatMutation("changeClaimsStatus", input, clientMutationLabel, clientMutationDetails);
+  var requestedDateTime = new Date();
+  
+  return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_SUBMIT_TO_REVIEW_RESP", "CLAIM_MUTATION_ERR"], {
+    clientMutationId: mutation.clientMutationId,
+    clientMutationLabel,
+    clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+    requestedDateTime,
+  });
+}
