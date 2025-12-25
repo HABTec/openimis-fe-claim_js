@@ -58,7 +58,7 @@ const ClaimReturnComments = ({ returnReasons = [], predefinedReasons = [] }) => 
                 </Typography>
               )}
 
-              {rr.predefinedReason && (
+              {(rr.predefinedReason && rr.predefinedReason !== "0") && (
                 <Typography variant="body2">
                   <strong>Predefined Reason:</strong> {getReasonName(rr.predefinedReason)}
                 </Typography>
@@ -70,9 +70,16 @@ const ClaimReturnComments = ({ returnReasons = [], predefinedReasons = [] }) => 
                 </Typography>
               )}
 
-              {rr.returnedBy &&(
+              {rr.returnedBy && (
                 <Typography variant="body2">
                   <strong>Author:</strong> {rr.returnedBy.otherNames}
+                </Typography>
+              )}
+
+              {rr.returnType && (
+                <Typography variant="body2">
+                  <strong>From:</strong>{" "}
+                  {rr.returnType === 18 ? "Branch" : rr.returnType === 17 ? "Facility Head" : "Claim Preparer"}
                 </Typography>
               )}
 
