@@ -30,6 +30,8 @@
   "claim.action.success": "Success Message",
   "claim.action.return.successMessage": "Returned successfully",
   "claim.action.return": "Return",
+  "claim.action.success.approve": "Approved Successfully",
+  "claim.action.success.reject": "Rejected Successfully",
   "claim.returnReasons.title": "Predefined Reasons",
   "claim.action.resubmit.successMessage": "Resubmitted successfully",
   "claim.comment": "Comment",
