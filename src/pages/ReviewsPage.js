@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { bindActionCreators } from "redux";
 import { connect } from "react-redux";
 import { injectIntl } from "react-intl";
-import { Grid, InputAdornment, IconButton, Tooltip } from "@material-ui/core";
+import { Grid, InputAdornment, IconButton, Tooltip, Tabs, Tab, Paper } from "@material-ui/core";
 import FilterIcon from "@material-ui/icons/FilterList";
 import FeedbackIcon from "@material-ui/icons/SpeakerNotesOutlined";
 import ReviewIcon from "@material-ui/icons/SupervisorAccount";
@@ -32,6 +32,7 @@ import {
   deliverReview,
   skipReview,
   process,
+  changeClaimStatus,
 } from "../actions";
 import { RIGHT_UPDATE, RIGHT_FEEDBACK, RIGHT_CLAIMREVIEW, RIGHT_PROCESS, MODULE_NAME } from "../constants";
 import { withTheme, withStyles } from "@material-ui/core/styles";
@@ -47,6 +48,18 @@ const styles = (theme) => ({
   },
   toggledButton: {
     backgroundColor: theme.palette.toggledButton,
+  },
+  tabsRoot: {
+    marginBottom: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: 4,
+  },
+  tabsFlexContainer: {
+    display: "flex",
+  },
+  tabItem: {
+    flexGrow: 1,
+    maxWidth: "none",
   },
 });
 
@@ -306,20 +319,61 @@ const RandomAndValueFilters = withModulesManager(
 class ReviewsPage extends Component {
   constructor(props) {
     super(props);
+    this.tabDefinitions = [
+      {
+        id: 0,
+        label: "claimSummaries.tabs.submittedFromHead",
+        defaultLabel: "Submitted From Head",
+        type: "claim",
+        filter: { "claimStatus": { "value": 0, "filter": "status: 4" } },
+      },
+      {
+        id: 1,
+        label: "claimSummaries.tabs.flagged",
+        defaultLabel: "Flagged",
+        type: "claim",
+        filter: { "claimStatus": { "value": 2, "filter": "status: 22" } },
+      },
+      {
+        id: 2,
+        label: "claimSummaries.tabs.resubmittedFromHead",
+        defaultLabel: "Resubmitted From Head",
+        type: "claim",
+        filter: { "claimStatus": { "value": 2, "filter": "status: 21" } },
+      },
+      {
+        id: 3,
+        label: "claimSummaries.tabs.approved",
+        defaultLabel: "Approved",
+        type: "claim",
+        filter: { "claimStatus": { "value": 3, "filter": "status: 16" } },
+      },
+      {
+        id: 4,
+        label: "claimSummaries.tabs.rejected",
+        defaultLabel: " Rejected",
+        type: "claim",
+        filter: { "claimStatus": { "value": 4, "filter": "status: 1" } },
+      },
+    ];
+
+    const defaultFilters = props.modulesManager.getConf(
+      "fe-claim",
+      "reviews.defaultFilters",
+      this.tabDefinitions[0].filter,
+    );
+
     this.state = {
-      defaultFilters: props.modulesManager.getConf("fe-claim", "reviews.defaultFilters", {
-        "claimStatus": {
-          "value": 4,
-          "filter": "status: 4",
-        },
-      }),
+      selectedTab: 0,
+      currentFilters: defaultFilters,
+      resetKey: 0,
     };
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
     if (prevProps.submittingMutation && !this.props.submittingMutation) {
       this.props.journalize(this.props.mutation);
-      this.setState({ reset: this.state.reset + 1 });
+      this.setState((prevState) => ({ resetKey: prevState.resetKey + 1 }));
     }
   }
 
@@ -377,6 +431,17 @@ class ReviewsPage extends Component {
     );
   };
 
+  handleTabChange = (event, newValue) => {
+    this.setState({
+      selectedTab: newValue,
+      currentFilters: this.tabDefinitions[newValue].filter,
+      resetKey: this.state.resetKey + 1,
+    });
+
+    this.props.clearCurrentPaginationPage();
+    console.log("Updated to tab:", newValue);
+  };
+
   canMarkSelectedForReview = (selection) =>
     !!selection &&
     selection.length &&
@@ -389,6 +454,33 @@ class ReviewsPage extends Component {
       "SelectClaimForReview.mutationLabel",
       "SelectClaimsForReview.mutationLabel",
       this.props.selectForReview,
+    );
+  };
+
+  canApproveSelected = (selection) =>
+    !!selection && selection.length > 0 && selection.every((s) => s.status === 4);
+
+  approveSelected = (selection) => {
+    const uuids = selection.map((s) => s.uuid);
+    this._labelMutation(
+      selection,
+      "claimSummaries.approve.mutationLabel",
+      "claimSummaries.approve.mutationLabelMultiple",
+      (sel, label) => this.props.changeClaimStatus(uuids, 16, label)
+    );
+  };
+
+  
+  canFlagSelected = (selection) =>
+    !!selection && selection.length > 0 && selection.every((s) => s.status === 4);
+
+  flagSelected = (selection) => {
+    const uuids = selection.map((s) => s.uuid);
+    this._labelMutation(
+      selection,
+      "claimSummaries.flag.mutationLabel",
+      "claimSummaries.flag.mutationLabelMultiple",
+      (sel, label) => this.props.changeClaimStatus(uuids, 22, label)
     );
   };
 
@@ -597,61 +689,104 @@ class ReviewsPage extends Component {
 
   render() {
     const { classes, rights } = this.props;
+    const { selectedTab, resetKey } = this.state;
+    const currentFilters = this.state.currentFilters
+    console.log("branch state look", this.state, currentFilters.claimStatus)
     if (!rights.filter((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS).length) return null;
     let actions = [];
-    if (rights.includes(RIGHT_UPDATE)) {
+    if (rights.includes(RIGHT_UPDATE) && (selectedTab === 0 || selectedTab === 2)) {
       actions.push(
         {
-          label: "claimSummaries.markSelectedForFeedback",
-          enabled: this.canMarkSelectedForFeedback,
-          action: this.markSelectedForFeedback,
+          label: "claimSummaries.approveSelected",
+          enabled: this.canApproveSelected,
+          action: this.approveSelected,
         },
         {
-          label: "claimSummaries.markBypassedFeedback",
-          enabled: this.canMarkBypassedFeedback,
-          action: this.markBypassedFeedback,
-        },
-        {
-          label: "claimSummaries.markSkippedFeedback",
-          enabled: this.canMarkSkippedFeedback,
-          action: this.markSkippedFeedback,
-        },
-        {
-          label: "claimSummaries.markSelectedForReview",
-          enabled: this.canMarkSelectedForReview,
-          action: this.markSelectedForReview,
-        },
-        {
-          label: "claimSummaries.markBypassedReview",
-          enabled: this.canMarkBypassedReview,
-          action: this.markBypassedReview,
-        },
-        {
-          label: "claimSummaries.markDeliveredReview",
-          enabled: this.canMarkDeliveredReview,
-          action: this.markDeliveredReview,
-        },
-        {
-          label: "claimSummaries.markSkippedReview",
-          enabled: this.canMarkSkippedReview,
-          action: this.markSkippedReview,
-        },
+          label: "claimSummaries.flagSelected",
+          enabled: this.canFlagSelected,
+          action: this.flagSelected,
+        }
       );
     }
-    if (rights.includes(RIGHT_PROCESS)) {
-      actions.push({
-        label: "claimSummaries.processSelected",
-        enabled: this.canProcessSelected,
-        action: this.processSelected,
-      });
-    }
+    // actions used prior to the customization
 
+    
+    // if (rights.includes(RIGHT_UPDATE)) {
+    //   actions.push(
+    //     {
+    //       label: "claimSummaries.markSelectedForFeedback",
+    //       enabled: this.canMarkSelectedForFeedback,
+    //       action: this.markSelectedForFeedback,
+    //     },
+    //     {
+    //       label: "claimSummaries.markBypassedFeedback",
+    //       enabled: this.canMarkBypassedFeedback,
+    //       action: this.markBypassedFeedback,
+    //     },
+    //     {
+    //       label: "claimSummaries.markSkippedFeedback",
+    //       enabled: this.canMarkSkippedFeedback,
+    //       action: this.markSkippedFeedback,
+    //     },
+    //     {
+    //       label: "claimSummaries.markSelectedForReview",
+    //       enabled: this.canMarkSelectedForReview,
+    //       action: this.markSelectedForReview,
+    //     },
+    //     {
+    //       label: "claimSummaries.markBypassedReview",
+    //       enabled: this.canMarkBypassedReview,
+    //       action: this.markBypassedReview,
+    //     },
+    //     {
+    //       label: "claimSummaries.markDeliveredReview",
+    //       enabled: this.canMarkDeliveredReview,
+    //       action: this.markDeliveredReview,
+    //     },
+    //     {
+    //       label: "claimSummaries.markSkippedReview",
+    //       enabled: this.canMarkSkippedReview,
+    //       action: this.markSkippedReview,
+    //     },
+    //   );
+    // }
+    // if (rights.includes(RIGHT_PROCESS)) {
+    //   actions.push({
+    //     label: "claimSummaries.processSelected",
+    //     enabled: this.canProcessSelected,
+    //     action: this.processSelected,
+    //   });
+    // }
+
+    const dynamicCacheKey = `claimReviewsPageFiltersCache_${selectedTab}`;
     return (
       <div className={classes.page}>
         <Helmet title={formatMessage(this.props.intl, "claim", "claim.reviews.page.title")} />
+        <Paper className={classes.tabsRoot} square>
+          <Tabs
+            value={selectedTab}
+            onChange={this.handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            className={classes.tabsFlexContainer}
+          >
+            {this.tabDefinitions.map((tab) => (
+              <Tab
+                key={tab.id}
+                label={formatMessage(this.props.intl, "claim", tab.label, tab.defaultLabel)}
+                className={classes.tabItem}
+              />
+            ))}
+          </Tabs>
+        </Paper>
+
         <ClaimSearcher
-          defaultFilters={this.state.defaultFilters}
-          cacheFiltersKey="claimReviewsPageFiltersCache"
+          key={`reviewSearcher- ${selectedTab}-${resetKey}`}
+          // defaultFilters={this.state.defaultFilters}
+          defaultFilters={currentFilters}
+          cacheFiltersKey={dynamicCacheKey}
           FilterExt={RandomAndValueFilters}
           actions={actions}
           onDoubleClick={rights.includes(RIGHT_UPDATE) ? this.onDoubleClick : null}
@@ -692,6 +827,7 @@ const mapDispatchToProps = (dispatch) => {
       skipReview,
       process,
       clearCurrentPaginationPage,
+      changeClaimStatus,
     },
     dispatch,
   );
