@@ -159,6 +159,7 @@ export function fetchClaimSummaries(mm, filters, withAttachmentsCount) {
     "approved",
     "status",
     "restoreId",
+    "returnReasons { id returnType}",
     "healthFacility { id uuid name code }",
     "insuree" + mm.getProjection("insuree.InsureePicker.projection"),
     "preAuthorization",
@@ -329,6 +330,7 @@ export function fetchClaim(mm, claimUuid, forFeedback) {
     "approved",
     "valuated",
     "status",
+    "validityTo",
     "feedbackStatus",
     "reviewStatus",
     "guaranteeId",
@@ -774,4 +776,124 @@ export function clearAlert() {
   return (dispatch) => {
     dispatch({ type: "CORE_ALERT_CLEAR" });
   };
+}
+
+export function resubmitToBranch(uuids, returnType, clientMutationLabel ="resubmitToBranch", clientMutationDetails = null) {
+  let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
+  let status = `status: ${returnType}`;
+  let input = `${claimUuids}, ${status}`;
+  let mutation = formatMutation("changeClaimsStatus", input, clientMutationLabel, clientMutationDetails);
+  var requestedDateTime = new Date();
+  return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_APPROVE_CLAIMS_RESP", "CLAIM_MUTATION_ERR"], {
+    clientMutationId: mutation.clientMutationId,
+    clientMutationLabel,
+    clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+    requestedDateTime,
+  });
+}
+
+export function submitToBranch(uuids, clientMutationLabel ="submitToBranch", clientMutationDetails = null) {
+  let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
+  let input = `${claimUuids}`;
+  let mutation = formatMutation("submitClaims", input, clientMutationLabel, clientMutationDetails);
+  var requestedDateTime = new Date();
+  return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_APPROVE_CLAIMS_RESP", "CLAIM_MUTATION_ERR"], {
+    clientMutationId: mutation.clientMutationId,
+    clientMutationLabel,
+    clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+    requestedDateTime,
+  });
+}
+
+
+export function returnClaim(claimId, predefinedReason, reason, returnType, clientMutationLabel, clientMutationDetails = null) {
+  let input = `uuid: "${claimId}", predefinedReason: "${formatGQLString(predefinedReason)}", reason: "${formatGQLString(reason)}", returnType: ${returnType}`;
+  
+  let mutation = formatMutation("returnClaim", input, clientMutationLabel, clientMutationDetails);
+  var requestedDateTime = new Date();
+  
+  return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_RETURN_CLAIM_RESP", "CLAIM_MUTATION_ERR"], {
+    clientMutationId: mutation.clientMutationId,
+    clientMutationLabel,
+    clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+    requestedDateTime,
+  });
+}
+
+
+export function fetchPredefinedClaimReasons() {
+  const payload = formatQuery(
+    "returnedClaimsReason",
+    null,
+    ["code", "name"]
+  );
+  return graphql(payload, "CLAIM_RETURNED_CLAIM_REASONS");
+}
+
+export function submitToFacilityHead(uuids, clientMutationLabel ="submitToHead", clientMutationDetails = null) {
+  let claimUuids = `uuids: ["${uuids.map((u) => u).join('","')}"]`;
+  let status = `status: 19`; 
+  let input = `${claimUuids}, ${status}`;
+  
+  let mutation = formatMutation("changeClaimsStatus", input, clientMutationLabel, clientMutationDetails);
+  var requestedDateTime = new Date();
+  
+  return graphql(mutation.payload, ["CLAIM_MUTATION_REQ", "CLAIM_SUBMIT_TO_REVIEW_RESP", "CLAIM_MUTATION_ERR"], {
+    clientMutationId: mutation.clientMutationId,
+    clientMutationLabel,
+    clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+    requestedDateTime,
+  });
+}
+
+export function resubmitClaim(claimId, resubmitReason, returnType, clientMutationLabel = "resubmitClaim", clientMutationDetails = null) {
+  const input = `uuid: "${claimId}", reason: "${formatGQLString(resubmitReason)}", returnType: ${returnType}`;
+
+  const mutation = formatMutation("resubmitClaim", input, clientMutationLabel, clientMutationDetails);
+  const requestedDateTime = new Date();
+
+  return graphql(mutation.payload,["CLAIM_MUTATION_REQ", "CLAIM_RESUBMIT_CLAIM_RESP", "CLAIM_MUTATION_ERR"],{
+      clientMutationId: mutation.clientMutationId,
+      clientMutationLabel,
+      clientMutationDetails: !!clientMutationDetails ? JSON.stringify(clientMutationDetails) : null,
+      requestedDateTime,
+    },
+  );
+}
+
+export function fetchClaimReturnReasons(mm, claimUuid){
+  const payload = formatQuery(
+    "claims",
+    [`uuid: "${claimUuid}"`],
+    [
+      `
+      edges {
+        node {
+          uuid
+          returnReasons {
+            id
+            reason
+            predefinedReason
+            returnedDate
+            returnType
+            returnedBy {
+            id
+            lastName
+            email
+            uuid
+            otherNames
+            }
+          }
+          status
+        }
+      }
+      `
+    ],
+  );
+
+  return graphql(payload, "CLAIM_RETURN_REASONS");
+};
+
+export function clearClaimReturnReasons() {
+  return { type: "CLAIM_RETURN_REASONS_CLEAR" };
 }

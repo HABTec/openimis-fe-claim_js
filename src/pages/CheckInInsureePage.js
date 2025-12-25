@@ -96,7 +96,7 @@ class CheckInInsureePage extends Component {
 
     const isFetchingStatus = persistedCheckInStatus === null;
     const isLoading = checkingIn || isFetchingStatus;
-    const isCheckedIn = checkedIn || persistedCheckInStatus === true;
+    const isCheckedIn = (persistedCheckInStatus === true) || (checkedIn === true && !checkingIn);
     const loadingIcon = <CircularProgress size={24} color="inherit" />;
     const actionIcon = isCheckedIn ? <DeleteIcon /> : <CheckIcon />;
 

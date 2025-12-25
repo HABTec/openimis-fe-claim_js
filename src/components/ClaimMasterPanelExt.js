@@ -86,9 +86,31 @@ class ClaimMasterPanelExt extends Component {
   }
 
   goToClaimUuid(uuid) {
-    const { modulesManager, history } = this.props;
-    historyPush(modulesManager, history, "claim.route.claimEdit", [uuid], true);
-  }
+    const { modulesManager, history, readOnly } = this.props;
+
+    if (readOnly) {
+        let path = modulesManager.getRef("claim.route.claimReview");
+
+        if (path) {
+            path = path.replace(":claim_uuid", uuid);
+
+            
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+
+            const fullUrl = history.createHref({ pathname: path });
+            // window.location.assign(fullUrl);
+            window.open(fullUrl, "_blank")
+            
+        } else {
+            console.error("Route 'claim.route.claimReview' is missing in index.js refs.");
+        }
+
+    } else {
+        historyPush(modulesManager, history, "claim.route.claimEdit", [uuid], true);
+    }
+}
 
   valuatePolicyValidity = (currentPolicy) => {
     const { classes } = this.props;

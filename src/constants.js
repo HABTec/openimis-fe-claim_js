@@ -8,6 +8,13 @@ export const APPROVAL_STATUS = [1, 2];
 export const CLAIM_DETAIL_REJECTED_STATUS = 2;
 export const STATUS_REJECTED = 1;
 export const STATUS_ENTERED = 2;
+export const STATUS_RETURNED_FROM_FACILITY = 17;
+export const STATUS_RETURNED_FROM_BRANCH = 18;
+export const STATUS_SUBMITTED_TO_HEAD = 19;
+export const STATUS_RESUBMITTED_TO_HEAD = 20;
+export const CLAIM_APPROVAL_FILTER_CONTRIBUTION_KEY = "claim.ApprovalFilter";
+export const CLAIM_APPROVAL_ACTION_CONTRIBUTION_KEY = "claim.ApprovalAction";
+
 export const REJECTION_REASONS = _.range(-1, 20);
 export const FEEDBACK_ASSESSMENTS = _.range(-1, 6);
 // NULL - all claims, 1 - with attachments, 2 - without attachments
@@ -42,6 +49,11 @@ export const RIGHT_FEEDBACK = 111009;
 export const RIGHT_UPDATE = 111010;
 export const RIGHT_PROCESS = 111011;
 export const RIGHT_RESTORE = 111012;
+export const RIGHT_CHECK = 111008
+export const RIGHT_REVIEW_PAGE = 111080;
+export const RIGHT_APPROVAL_PAGE = 111081;
+export const RIGHT_CHECKIN_PAGE = 111082;
+export const RIGHT_FACILITY_PAGE = 111083;
 
 export const CLAIMS_WITH_AT_LEAST_ENTERED_STATUS = "status_Gt: 2";
 
@@ -84,3 +96,5 @@ export const DECEASED = "D";
 export const ESCAPED = "E";
 export const REFERRAL = "R";
 export const PATIENT_CONDITION = [HEALED, DECEASED, ESCAPED, REFERRAL];
+export const CLAIM_STATUS_SUBMITTED = 4;
+export const CLAIM_STATUS_RESUBMITTED = 8;

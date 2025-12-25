@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Keyboard, ScreenShare, Assignment
+  Keyboard, ScreenShare, Assignment, CheckCircle
 } from "@material-ui/icons";
 import { FormattedMessage } from "@openimis/fe-core";
 import ClaimMainMenu from "./menus/ClaimMainMenu";
@@ -35,17 +35,20 @@ import ClaimsPrimaryOperationalIndicators from "./reports/ClaimsPrimaryOperation
 import ClaimInsureeSummary from "./components/ClaimInsureeSummary";
 import YesNoPicker from "./pickers/YesNoPicker";
 import PatientConditionPicker from "./pickers/PatientConditionPicker";
-import { RIGHT_ADD, RIGHT_SUBMIT, RIGHT_CLAIMREVIEW, RIGHT_PROCESS } from "./constants";
+import { RIGHT_ADD, RIGHT_SUBMIT, RIGHT_CLAIMREVIEW, RIGHT_PROCESS, RIGHT_REVIEW_PAGE, RIGHT_APPROVAL_PAGE, RIGHT_CHECKIN_PAGE, RIGHT_FACILITY_PAGE } from "./constants";
 import CheckInPage from './pages/CheckInPage';
 import CheckInInsureePage from './pages/CheckInInsureePage';
+import ClaimApprovalPage from './pages/ClaimApprovalPage';
 
 const ROUTE_HEALTH_FACILITIES = "claim/healthFacilities";
 const ROUTE_CLAIM_EDIT = "claim/healthFacilities/claim";
+const ROUTE_CLAIM_REVIEW_DETAIL = "claim/claimReview"; //for head or for claim approver
 const ROUTE_REVIEWS = "claim/reviews";
 const ROUTE_CLAIM_REVIEW = "claim/reviews/review";
 const ROUTE_CLAIM_FEEDBACK = "claim/feedback";
 const ROUTE_CLAIM_CHECKIN = "claim/checkIn";
 const ROUTE_CLAIM_CHECKIN_INSUREE = "claim/checkIn/insuree";
+const ROUTE_CLAIM_APPROVAL = "claim/claimApproval";
 
 const DEFAULT_CONFIG = {
   "translations": [{ key: "en", messages: messages_en } , { key: "am", messages: messages_am} , { key: "om", messages: messages_om }],
@@ -149,12 +152,14 @@ const DEFAULT_CONFIG = {
   "refs": [
     { key: "claim.route.healthFacilities", ref: ROUTE_HEALTH_FACILITIES },
     { key: "claim.route.claimEdit", ref: ROUTE_CLAIM_EDIT },
+    { key: "claim.route.claimReview", ref: ROUTE_CLAIM_REVIEW_DETAIL + "/:claim_uuid" },
     { key: "claim.route.reviews", ref: ROUTE_REVIEWS },
     { key: "claim.route.feedback", ref: ROUTE_CLAIM_FEEDBACK },
     { key: "claim.route.review", ref: ROUTE_CLAIM_REVIEW },
     { key: "claim.route.checkIn", ref: ROUTE_CLAIM_CHECKIN },
     { key: "claim.route.checkInInsuree", ref: ROUTE_CLAIM_CHECKIN_INSUREE },
     { key: "claim.ClaimAdminPicker", ref: ClaimAdminPicker },
+    { key: "claim.route.claimApproval", ref: ROUTE_CLAIM_APPROVAL },
     {
       key: "claim.ClaimAdminPicker.projection",
       ref: [
@@ -190,15 +195,18 @@ const DEFAULT_CONFIG = {
     { key: "claim.AttachmentsDialog", ref: AttachmentsDialog },
     { key: "claim.YesNoPicker", ref: YesNoPicker },
     { key: "claim.PatientConditionPicker", ref: PatientConditionPicker },
+    { key: "claim.ApprovalPage", ref: ClaimApprovalPage },
   ],
   "core.Router": [
     { path: ROUTE_HEALTH_FACILITIES, component: HealthFacilitiesPage },
     { path: ROUTE_CLAIM_EDIT + "/:claim_uuid?", component: EditPage }, // ? = optional (needed to route new claims)
+    { path: ROUTE_CLAIM_REVIEW_DETAIL + "/:claim_uuid", component: EditPage, id: "claim.route.claimReview" },
     { path: ROUTE_REVIEWS, component: ReviewsPage },
     { path: ROUTE_CLAIM_REVIEW + "/:claim_uuid/:customBackUri?/:customBackUuid?", component: ReviewPage },
     { path: ROUTE_CLAIM_CHECKIN, component: CheckInPage },
     { path: ROUTE_CLAIM_CHECKIN_INSUREE + "/:insuree_uuid", component: CheckInInsureePage },
     { path: ROUTE_CLAIM_FEEDBACK + "/:claim_uuid", component: FeedbackPage },
+    { path: ROUTE_CLAIM_APPROVAL, component: ClaimApprovalPage },
   ],
   "core.MainMenu": [{ name: 'ClaimMainMenu', component: ClaimMainMenu }],
   "claim.MasterPanel": [ClaimMasterPanelExt],
@@ -209,21 +217,28 @@ const DEFAULT_CONFIG = {
       icon: <Keyboard />,
       route: "/claim/healthFacilities",
       id: "claim.healthFacilityClaims",
-      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+      filter: (rights) => rights.some((r) => r === RIGHT_FACILITY_PAGE),
+    },
+    {
+      text: <FormattedMessage module="claim" id="menu.claimApproval" />,
+      icon: <CheckCircle />,
+      route: "/claim/claimApproval",
+      id: "claim.claimApproval",
+      filter: (rights) => rights.some((r) => r === RIGHT_APPROVAL_PAGE),
     },
     {
       text: <FormattedMessage module="claim" id="menu.reviews" />,
       icon: <Assignment />,
       route: "/claim/reviews",
       id: "claim.reviews",
-      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+      filter: (rights) => rights.some((r) => r === RIGHT_REVIEW_PAGE),
     },
     {
       text: <FormattedMessage module="claim" id="menu.checkIn" />,
       icon: <ScreenShare />,
       route: "/claim/checkIn",
       id: "claim.checkIn",
-      filter: (rights) => rights.some((r) => r >= RIGHT_CLAIMREVIEW && r <= RIGHT_PROCESS),
+      filter: (rights) => rights.some((r) => r === RIGHT_CHECKIN_PAGE),
     }
 ],
 };
