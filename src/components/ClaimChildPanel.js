@@ -372,7 +372,7 @@ class ClaimChildPanel extends Component {
       (i, idx) => (
         <AmountInput
           readOnly={!!forReview || readOnly || this.fixedPricesAtEnter}
-          value={!!forReview ? i.priceAsked : this.state.data[idx].priceAsked}
+          value={!!forReview ? i.priceAsked : this.state.data[idx]?.priceAsked}
           decimal={true}
           onChange={(v) => this._onChange(idx, "priceAsked", v)}
         />
