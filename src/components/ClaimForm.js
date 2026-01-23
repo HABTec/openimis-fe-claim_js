@@ -71,6 +71,12 @@ class ClaimItemsPanel extends Component {
   }
 }
 
+class ClaimLaboratoryTestsPanel extends Component {
+  render() {
+    return <ClaimChildPanel {...this.props} type="labService" picker="medical.LabServicePicker" />;
+  }
+}
+
 class ClaimForm extends Component {
   state = {
     lockNew: false,
@@ -139,6 +145,17 @@ class ClaimForm extends Component {
       JSON.parse(localStorage.getItem(STORAGE_KEY_CLAIM_HEALTH_FACILITY));
     claim.admin =
       this?.state?.claim?.admin ?? this.props.claimAdmin ?? JSON.parse(localStorage.getItem(STORAGE_KEY_ADMIN));
+
+    const adminHf = claim?.admin?.healthFacility;
+    if (claim.healthFacility && adminHf && adminHf.uuid && claim.healthFacility.uuid === adminHf.uuid) {
+      claim.healthFacility = {
+        ...claim.healthFacility,
+        servicesPricelist: adminHf.servicesPricelist ?? claim.healthFacility.servicesPricelist,
+        itemsPricelist: adminHf.itemsPricelist ?? claim.healthFacility.itemsPricelist,
+        labServicesPricelist: adminHf.labServicesPricelist ?? claim.healthFacility.labServicesPricelist,
+      };
+    }
+
     claim.status = this.props.modulesManager.getConf("fe-claim", "newClaim.status", 2);
     claim.dateClaimed = toISODate(moment().toDate());
     claim.dateFrom = toISODate(moment().toDate());
@@ -215,6 +232,17 @@ class ClaimForm extends Component {
     if (prevProps.fetchedClaim !== this.props.fetchedClaim && !!this.props.fetchedClaim) {
       var claim = this.props.claim;
       claim.jsonExt = !!claim.jsonExt ? JSON.parse(claim.jsonExt) : {};
+
+      const adminHf = claim?.admin?.healthFacility;
+      if (claim.healthFacility && adminHf && adminHf.uuid && claim.healthFacility.uuid === adminHf.uuid) {
+        claim.healthFacility = {
+          ...claim.healthFacility,
+          servicesPricelist: adminHf.servicesPricelist ?? claim.healthFacility.servicesPricelist,
+          itemsPricelist: adminHf.itemsPricelist ?? claim.healthFacility.itemsPricelist,
+          labServicesPricelist: adminHf.labServicesPricelist ?? claim.healthFacility.labServicesPricelist,
+        };
+      }
+
       this.setState({ claim, claim_uuid: claim.uuid, lockNew: false, newClaim: false }, () => {
         this.props.claimHealthFacilitySet(this.props.claim.healthFacility);
 
@@ -222,6 +250,31 @@ class ClaimForm extends Component {
           this.props.onEditedChanged(this.state.claim);
         }
       });
+    } else if (
+      prevProps.claimHealthFacility !== this.props.claimHealthFacility &&
+      this.props.claimHealthFacility?.uuid &&
+      this.state.claim?.healthFacility?.uuid === this.props.claimHealthFacility.uuid
+    ) {
+      const hf = this.props.claimHealthFacility;
+      const currentHf = this.state.claim.healthFacility;
+      const shouldMerge =
+        (!currentHf?.labServicesPricelist && !!hf?.labServicesPricelist) ||
+        (!currentHf?.servicesPricelist && !!hf?.servicesPricelist) ||
+        (!currentHf?.itemsPricelist && !!hf?.itemsPricelist);
+
+      if (shouldMerge) {
+        this.setState((state) => ({
+          claim: {
+            ...state.claim,
+            healthFacility: {
+              ...state.claim.healthFacility,
+              servicesPricelist: hf.servicesPricelist ?? state.claim.healthFacility.servicesPricelist,
+              itemsPricelist: hf.itemsPricelist ?? state.claim.healthFacility.itemsPricelist,
+              labServicesPricelist: hf.labServicesPricelist ?? state.claim.healthFacility.labServicesPricelist,
+            },
+          },
+        }));
+      }
     } else if (this.props.claim_uuid && prevProps.claim_uuid !== this.props.claim_uuid) {
       this.setState(
         (state, props) => ({ claim_uuid: props.claim_uuid }),
@@ -279,7 +332,7 @@ class ClaimForm extends Component {
       return false;
     }
 
-    if (forReview && qtyProvided < detail.qtyApproved) return false;
+    if (forReview && detail.qtyApproved !== undefined && qtyProvided < detail.qtyApproved) return false;
 
     return true;
   };
@@ -389,7 +442,17 @@ class ClaimForm extends Component {
           return false;
         }
       }
-      if (!items.length && !services.length) return !!this.canSaveClaimWithoutServiceNorItem;
+
+      let labServices = [];
+      if (!!this.state.claim.labServices) {
+        labServices = [...this.state.claim.labServices];
+        if (!this.props.forReview) labServices.pop();
+        if (labServices.length && labServices.filter((s) => !this.canSaveDetail(s, "labService", forReview)).length) {
+          return false;
+        }
+      }
+
+      if (!items.length && !services.length && !labServices.length) return !!this.canSaveClaimWithoutServiceNorItem;
     }
     return true;
   };
@@ -636,7 +699,7 @@ class ClaimForm extends Component {
               title="edit.title"
               titleParams={{ code: this.state.claim.code }}
               HeadPanel={ClaimMasterPanel}
-              Panels={!!forFeedback ? [ClaimFeedbackPanel] : [ClaimServicesPanel, ClaimItemsPanel]}
+              Panels={!!forFeedback ? [ClaimFeedbackPanel] : [ClaimServicesPanel, ClaimLaboratoryTestsPanel, ClaimItemsPanel]}
               openDirty={save || forReview}
               additionalTooltips={tooltips}
               {...editingProps}

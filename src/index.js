@@ -168,7 +168,7 @@ const DEFAULT_CONFIG = {
         "code",
         "lastName",
         "otherNames",
-        "healthFacility{id, uuid, code, name, level, servicesPricelist{id, uuid}, itemsPricelist{id, uuid}, location{id, uuid, code, name, parent{id, uuid, code, name}}}",
+        "healthFacility{id, uuid, code, name, level, servicesPricelist{id, uuid}, itemsPricelist{id, uuid}, labServicesPricelist{id, uuid}, location{id, uuid, code, name, parent{id, uuid, code, name}}}",
       ],
     },
     { key: "claim.ClaimOfficerPicker", ref: ClaimOfficerPicker },
