@@ -453,6 +453,8 @@ function reducer(
       return dispatchMutationResp(state, "submitClaims", action);
     case "CLAIM_SUBMIT_TO_REVIEW_RESP":
       return dispatchMutationResp(state, "changeClaimsStatus", action);
+    case "CLAIM_APPROVE_CLAIMS_RESP":
+      return dispatchMutationResp(state, "changeClaimsStatus", action);
     case "CLAIM_DELETE_CLAIMS_RESP":
       return dispatchMutationResp(state, "deleteClaims", action);
     case "CLAIM_SELECT_CLAIMS_FOR_FEEDBACK_RESP":
@@ -483,6 +485,8 @@ function reducer(
       return dispatchMutationResp(state, "deleteClaimAttachment", action);
     case "CLAIM_RESUBMIT_CLAIM_RESP":
       return dispatchMutationResp(state, "resubmitClaim", action);
+    case "CLAIM_RETURN_CLAIM_RESP":
+      return dispatchMutationResp(state, "returnClaim", action);
     case "CORE_ALERT_CLEAR":
       var s = { ...state };
       delete s.alert;

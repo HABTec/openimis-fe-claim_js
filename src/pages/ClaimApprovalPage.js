@@ -9,6 +9,7 @@ import {
   withModulesManager,
   formatMessage,
   formatMessageWithValues,
+  journalize,
   coreConfirm,
   Helmet,
   coreAlert,
@@ -47,6 +48,8 @@ const styles = (theme) => ({
 class ClaimApprovalPage extends Component {
   constructor(props) {
     super(props);
+
+    this.lastJournalizedId = null;
 
     this.tabDefinitions = [
       {
@@ -88,6 +91,21 @@ class ClaimApprovalPage extends Component {
   componentDidMount() {
     this.props.clearCurrentPaginationPage();
   }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.submittingMutation && !this.props.submittingMutation) {
+      this.journalizeMutation();
+    }
+  }
+
+  journalizeMutation = () => {
+    const { mutation, journalize } = this.props;
+    const mutationId = mutation?.clientMutationId;
+    if (!!mutationId && this.lastJournalizedId !== mutationId) {
+      journalize(mutation);
+      this.lastJournalizedId = mutationId;
+    }
+  };
 
   handleTabChange = (event, newValue) => {
     this.setState({
@@ -149,6 +167,7 @@ class ClaimApprovalPage extends Component {
         formatMessage(intl, "claim", "submitToBranch.success.title", "Success"),
         formatMessage(intl, "claim", "submitToBranch.success.message", "Claims submitted to branch successfully"),
       );
+      this.journalizeMutation();
     };
 
     if (selectedTab === 1) {
@@ -248,6 +267,8 @@ class ClaimApprovalPage extends Component {
 const mapStateToProps = (state) => ({
   rights: state.core?.user?.i_user?.rights || [],
   user: state.core?.user,
+  mutation: state.claim.mutation,
+  submittingMutation: state.claim.submittingMutation,
 });
 
 const mapDispatchToProps = (dispatch) => {
@@ -259,6 +280,7 @@ const mapDispatchToProps = (dispatch) => {
       resubmitToBranch,
       clearCurrentPaginationPage,
       coreAlert,
+      journalize,
     },
     dispatch,
   );

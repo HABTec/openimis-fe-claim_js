@@ -202,9 +202,10 @@ export function formatDetail(type, detail) {
     ${type}Id: ${decodeId(detail[type].id)}
     ${detail.priceAsked !== null ? `priceAsked: "${_.round(detail.priceAsked, 2).toFixed(2)}"` : ""}
     ${detail.qtyProvided !== null ? `qtyProvided: "${_.round(detail.qtyProvided, 2).toFixed(2)}"` : ""}
+    ${type === "labService" && detail.labResult !== undefined && detail.labResult !== null ? `labResult: "${formatGQLString(detail.labResult)}"` : ""}
     ${type == 'service' && subServices !== null ? `serviceServiceSet: [ ${subServices.map((d) => formatDetailSubService(type, d)).join("\n")}]` : ""} 
     ${type == 'service' && subItems !== null ? `serviceItemSet: [ ${subItems.map((d) => formatDetailSubService(type, d)).join("\n")}]` : ""}
-    status: 1
+    status: ${detail.status !== undefined && detail.status !== null ? detail.status : 1}
     ${
       detail.explanation !== undefined && detail.explanation !== null
         ? `explanation: "${formatGQLString(detail.explanation)}"`
@@ -280,6 +281,7 @@ export function formatClaimGQL(modulesManager, claim, shouldAutogenerate) {
     ${!!claim?.restore?.uuid ? `restore: "${formatGQLString(claim.restore.uuid)}"` : ""}
     ${formatDetails("service", claim.services)}
     ${formatDetails("item", claim.items)}
+    ${formatDetails("labService", claim.labServices)}
     ${
       !!claim.attachments && !!claim.attachments.length
         ? `attachments: ${formatAttachments(modulesManager, claim.attachments)}`
@@ -369,6 +371,9 @@ export function fetchClaim(mm, claimUuid, forFeedback) {
         "}",
       "items{" +
         "id, product { id, uuid }, item {id code name price maximumAmount} qtyProvided, priceAsked, qtyApproved, priceApproved, priceValuated, priceAdjusted, explanation, justification, rejectionReason, status" +
+        "}",
+      "labServices{" +
+        "id, product { id, uuid }, labService {id code name price}, qtyProvided, priceAsked, qtyApproved, priceApproved, priceValuated, priceAdjusted, explanation, justification, rejectionReason, labResult, status" +
         "}",
     );
   }
@@ -702,7 +707,51 @@ export function process(claims, clientMutationLabel, clientMutationDetails = nul
 }
 
 export function claimHealthFacilitySet(healthFacility) {
-  return (dispatch) => {
+  return async (dispatch) => {
+    const hasAllPricelists =
+      !!healthFacility?.servicesPricelist?.id &&
+      !!healthFacility?.itemsPricelist?.id &&
+      !!healthFacility?.labServicesPricelist?.id;
+
+    if (healthFacility?.uuid && !hasAllPricelists) {
+      try {
+        const payload = await graphqlWithVariables(
+          `query ClaimHFPricelists($hf: String!) {
+            claimAdmins(first: 1, healthFacility_Uuid: $hf) {
+              edges {
+                node {
+                  healthFacility {
+                    id uuid code name
+                    servicesPricelist { id uuid }
+                    itemsPricelist { id uuid }
+                    labServicesPricelist { id uuid }
+                  }
+                }
+              }
+            }
+          }`,
+          { hf: healthFacility.uuid },
+          "CLAIM_HF_PRICELISTS",
+        );
+
+        const enrichedHf = payload?.data?.claimAdmins?.edges?.[0]?.node?.healthFacility;
+        if (enrichedHf) {
+          dispatch({
+            type: "CLAIM_EDIT_HEALTH_FACILITY_SET",
+            payload: {
+              ...healthFacility,
+              servicesPricelist: enrichedHf.servicesPricelist ?? healthFacility.servicesPricelist,
+              itemsPricelist: enrichedHf.itemsPricelist ?? healthFacility.itemsPricelist,
+              labServicesPricelist: enrichedHf.labServicesPricelist ?? healthFacility.labServicesPricelist,
+            },
+          });
+          return;
+        }
+      } catch (e) {
+        // fall back to original payload
+      }
+    }
+
     dispatch({ type: "CLAIM_EDIT_HEALTH_FACILITY_SET", payload: healthFacility });
   };
 }

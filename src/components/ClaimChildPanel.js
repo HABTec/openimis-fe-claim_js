@@ -34,6 +34,8 @@ class ClaimChildPanel extends Component {
     data: [],
   };
 
+  isLaboratoryTestPanel = () => this.props.type === "labService";
+
   constructor(props) {
     super(props);
     this.explanationRequiredIfQuantityAboveThreshold = props.modulesManager.getConf(
@@ -61,9 +63,34 @@ class ClaimChildPanel extends Component {
     );
   }
 
+  _labServicesPricelistId = () => this.props.edited?.healthFacility?.labServicesPricelist?.id;
+
+  _labServicePrice = (labService) => {
+    const pricelistId = this._labServicesPricelistId();
+    if (!labService || !pricelistId) return labService?.price;
+    const id = decodeId(labService.id);
+    return this.props.labServicesPricelists?.[pricelistId]?.[id] ?? labService?.price;
+  };
+
+  _onChangeLabTest = (idx, attr, v) => {
+    const data = this._updateData(idx, [{ attr, v }]);
+    if (!v) {
+      data[idx].priceAsked = null;
+      data[idx].qtyProvided = null;
+    } else {
+      data[idx].priceAsked = this._labServicePrice(v);
+      if (!data[idx].qtyProvided) {
+        data[idx].qtyProvided = 1;
+      }
+    }
+    this._onEditedChanged(data);
+  };
+
   initData = () => {
     let data = [];
-    if (!!this.props.edited[`${this.props.type}s`]) {
+    if (this.isLaboratoryTestPanel()) {
+      data = this.props.edited?.labServices || [];
+    } else if (!!this.props.edited[`${this.props.type}s`]) {
       data = this.props.edited[`${this.props.type}s`] || [];
       let edited = { ...this.props.edited };
       edited[`${this.props.type}s`] = data;
@@ -111,7 +138,11 @@ class ClaimChildPanel extends Component {
 
   _onEditedChanged = (data) => {
     let edited = { ...this.props.edited };
-    edited[`${this.props.type}s`] = data;
+    if (this.isLaboratoryTestPanel()) {
+      edited.labServices = data;
+    } else {
+      edited[`${this.props.type}s`] = data;
+    }
     this.props.onEditedChanged(edited);
   };
 
@@ -153,14 +184,14 @@ class ClaimChildPanel extends Component {
   };
 
   _onChangeItem = (idx, attr, v) => {
-    let data = this._updateData(idx, [{attr, v}]);
+    let data = this._updateData(idx, [{ attr, v }]);
     if (!v) {
       data[idx].priceAsked = null;
       data[idx].qtyProvided = null;
       data[idx].qtyAppr = null;
     } else {
       data[idx].priceAsked = this._price(v);
-      if (!('item' in data[idx])) {
+      if (!("item" in data[idx])) {
         data[idx].subItems = this._serviceLinked(v);
         data[idx].subServices = this._serviceSet(v);
       }
@@ -299,6 +330,150 @@ class ClaimChildPanel extends Component {
   render() {
     const { intl, classes, edited, type, picker, forReview, fetchingPricelist, readOnly = false } = this.props;
     if (!edited) return null;
+
+    if (this.isLaboratoryTestPanel()) {
+      if (!this._labServicesPricelistId()) {
+        return (
+          <Paper className={classes.paper}>
+            <Error error={{ message: formatMessage(intl, "claim", "labServicesPricelist.missing") }} />
+          </Paper>
+        );
+      }
+
+      const headers = [
+        "edit.laboratoryTests.test",
+        "edit.laboratoryTests.quantity",
+        "edit.laboratoryTests.price",
+        "edit.laboratoryTests.explanation",
+        "edit.laboratoryTests.result",
+      ];
+      const itemFormatters = [
+        (i, idx) => (
+          <Box minWidth={400}>
+            <PublishedComponent
+              readOnly={!!forReview || readOnly}
+              pubRef={picker}
+              withLabel={false}
+              value={i.labService}
+              fullWidth
+              pricelistUuid={edited?.healthFacility?.labServicesPricelist?.uuid}
+              date={edited?.dateClaimed}
+              onChange={(v) => this._onChangeLabTest(idx, "labService", v)}
+            />
+          </Box>
+        ),
+        (i, idx) => (
+          <NumberInput
+            readOnly={!!forReview || readOnly || true}
+            value={i.qtyProvided}
+            onChange={(v) => this._onChange(idx, "qtyProvided", v)}
+            error={i.qtyProvided <= 0 ? formatMessage(intl, "claim", "ClaimChildPanel.quantity.error") : null}
+            max={this.quantityMaxValue}
+          />
+        ),
+        (i, idx) => (
+          <AmountInput
+            readOnly={!!forReview || readOnly || this.fixedPricesAtEnter || true}
+            value={this.state.data[idx]?.priceAsked}
+            decimal={true}
+            onChange={(v) => this._onChange(idx, "priceAsked", v)}
+          />
+        ),
+        (i, idx) => (
+          <TextInput
+            readOnly={!!forReview || readOnly}
+            value={i.explanation}
+            onChange={(v) => this._onChange(idx, "explanation", v)}
+          />
+        ),
+        (i, idx) => (
+          <TextInput
+            readOnly={!!forReview || readOnly}
+            value={i.labResult}
+            onChange={(v) => this._onChange(idx, "labResult", v)}
+          />
+        ),
+      ];
+
+      if (!!forReview || edited.status !== 2) {
+        headers.push("edit.laboratoryTests.appQuantity");
+        itemFormatters.push((i, idx) => (
+          <NumberInput
+            readOnly={!forReview && readOnly}
+            value={i.qtyApproved}
+            max={parseInt(i.qtyProvided)}
+            onChange={(v) => this._onChange(idx, "qtyApproved", v)}
+          />
+        ));
+        if (!this.fixedPricesAtReview) {
+          headers.push("edit.laboratoryTests.appPrice");
+          itemFormatters.push((i, idx) => (
+            <AmountInput
+              readOnly={!forReview && readOnly}
+              value={i.priceApproved}
+              decimal={true}
+              onChange={(v) => this._onChange(idx, "priceApproved", v)}
+            />
+          ));
+        }
+
+        headers.push("edit.laboratoryTests.pricevaluated");
+        itemFormatters.push((i, idx) => (
+          <AmountInput
+            readOnly={true}
+            decimal={true}
+            value={i.priceValuated}
+            onChange={(v) => this._onChange(idx, "priceValuated", v)}
+          />
+        ));
+      }
+
+      if (this.showJustificationAtEnter || edited.status !== 2) {
+        headers.push("edit.laboratoryTests.justification");
+        itemFormatters.push((i, idx) => (
+          <TextInput
+            readOnly={!forReview && readOnly}
+            value={i.justification}
+            onChange={(v) => this._onChange(idx, "justification", v)}
+          />
+        ));
+      }
+
+      if (!!forReview || edited.status !== 2) {
+        headers.push("edit.laboratoryTests.status", "edit.laboratoryTests.rejectionReason");
+        itemFormatters.push(
+          (i, idx) => (
+            <PublishedComponent
+              readOnly={!i.product?.uuid}
+              pubRef="claim.ApprovalStatusPicker"
+              withNull={false}
+              withLabel={false}
+              value={i.status}
+              onChange={(v) => this._onChangeApproval(idx, "status", v)}
+            />
+          ),
+          (i, idx) => this.formatRejectedReason(i, idx),
+        );
+      }
+
+      const header = formatMessage(intl, "claim", "edit.laboratoryTests.title");
+
+      return (
+        <Paper className={classes.paper}>
+          <Table
+            module="claim"
+            header={header}
+            headers={headers}
+            itemFormatters={itemFormatters}
+            items={!fetchingPricelist ? this.state.data : []}
+            onDelete={!forReview && !readOnly && this._onDelete}
+            disableDeleteOnEmptyRow
+            showOrdinalNumber={this.showOrdinalNumber}
+          />
+        </Paper>
+      );
+    }
+
     if (!this.props.edited.healthFacility || !this.props.edited.healthFacility[`${this.props.type}sPricelist`]?.id) {
       return (
         <Paper className={classes.paper}>
@@ -371,7 +546,7 @@ class ClaimChildPanel extends Component {
       ),
       (i, idx) => (
         <AmountInput
-          readOnly={!!forReview || readOnly || this.fixedPricesAtEnter}
+          readOnly={!!forReview || readOnly || this.fixedPricesAtEnter || true}
           value={!!forReview ? i.priceAsked : this.state.data[idx]?.priceAsked}
           decimal={true}
           onChange={(v) => this._onChange(idx, "priceAsked", v)}
@@ -720,6 +895,7 @@ const mapStateToProps = (state, props) => ({
   fetchingPricelist: !!state.medical_pricelist && state.medical_pricelist.fetchingPricelist,
   servicesPricelists: !!state.medical_pricelist ? state.medical_pricelist.servicesPricelists : {},
   itemsPricelists: !!state.medical_pricelist ? state.medical_pricelist.itemsPricelists : {},
+  labServicesPricelists: !!state.medical_pricelist ? state.medical_pricelist.labServicesPricelists : {},
 });
 
 export default withModulesManager(injectIntl(withTheme(withStyles(styles)(connect(mapStateToProps)(ClaimChildPanel)))));
